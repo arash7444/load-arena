@@ -1,2 +1,2 @@
 # load-arena
-This tools is developed to generate simulation input file for Wind turbine Design Load cases based on IEC 64100.
+A Python toolkit for comparing and post-processing IEC 61400 wind turbine aeroelastic simulation results.
