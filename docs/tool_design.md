@@ -49,3 +49,4 @@ The reader should convert raw simulation output into a common data structure use
 
 ## Flowchart of the tool:
 ![Load_Arena_flochart](docs/image/Load_Arena.drawio.png)
+
