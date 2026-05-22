@@ -48,5 +48,5 @@ flowchart TD
 The reader should convert raw simulation output into a common data structure used by the rest of the tool.
 
 ## Flowchart of the tool:
-![Load_Arena_flochart](docs/image/Load_Arena.drawio.png)
+![Load_Arena_flochart](docs/image/Load_Arena.png)
 
