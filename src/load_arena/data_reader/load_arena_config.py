@@ -4,10 +4,10 @@ import pathlib as path
 
 @dataclass
 class LoadArenaConfig:
-    """ 
+    """
     coniguration for loading data and different parameters name
 
     """
 
     def __init__(self):
-        self.path_
+        self.res_path = None

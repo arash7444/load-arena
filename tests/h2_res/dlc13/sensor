@@ -1,0 +1,88 @@
+  Version ID : HAWC2MB 12.5
+ No   forst  offset  korr. c  Volt    Unit   Navn    Beskrivelse---------------
+   1    1.0    0.0    0.00      1.0    s      Time    Time
+   2    1.0    0.0    0.00      1.0    -      DLL inp DLL : 8 inpvec : 15
+   3    1.0    0.0    0.00      1.0    m/s    WSP gl. Free wind speed Abs_vhor, gl. coo, of gl. pos    0.00,   0.00, -90.00
+   4    1.0    0.0    0.00      1.0    deg    WSP gl. Free wind speed Vdir_hor, gl. coo, of gl. pos    0.00,   0.00, -90.00
+   5    1.0    0.0    0.00      1.0    m/s    WSP gl. Free wind speed Vy, gl. coo, of gl. pos    0.00,   0.00, -90.00
+   6    1.0    0.0    0.00      1.0    m/s    WSP gl. Free wind speed Vx, gl. coo, of gl. pos    0.00,   0.00, -90.00
+   7    1.0    0.0    0.00      1.0    m/s    WSP gl. Free wind speed Vz, gl. coo, of gl. pos    0.00,   0.00, -90.00
+   8    1.0    0.0    0.00      1.0    rad    bea2 an yaw_bearing angle
+   9    1.0    0.0    0.00      1.0    rad/s  bea2 an yaw_bearing angle speed
+  10    1.0    0.0    0.00      1.0    deg    Azi  1  Azimuth of blade  1
+  11    1.0    0.0    0.00      1.0    rad/s   Omega   Rotor speed
+  12    1.0    0.0    0.00      1.0    rad/s  bea1 an shaft_rot angle speed
+  13    1.0    0.0    0.00      1.0    -      DLL inp powertrain inpvec  4
+  14    1.0    0.0    0.00      1.0    -      DLL inp powertrain inpvec  5
+  15    1.0    0.0    0.00      1.0    -      DLL inp mech_brake inpvec  1
+  16    1.0    0.0    0.00      1.0    kW     Ae rot. Aero rotor power
+  17    1.0    0.0    0.00      1.0    -      DLL inp powertrain inpvec  3
+  18    1.0    0.0    0.00      1.0    rad    bea2 an pitch1 angle
+  19    1.0    0.0    0.00      1.0    rad    bea2 an pitch2 angle
+  20    1.0    0.0    0.00      1.0    rad    bea2 an pitch3 angle
+  21    1.0    0.0    0.00      1.0    rad/s  bea2 an pitch1 angle speed
+  22    1.0    0.0    0.00      1.0    rad/s  bea2 an pitch2 angle speed
+  23    1.0    0.0    0.00      1.0    rad/s  bea2 an pitch3 angle speed
+  24    1.0    0.0    0.00      1.0    kNm    Mx coo: MomentMx Mbdy:blade1 nodenr:   1 coo: hub1
+  25    1.0    0.0    0.00      1.0    kNm    My coo: MomentMy Mbdy:blade1 nodenr:   1 coo: hub1
+  26    1.0    0.0    0.00      1.0    -      DLL inp DLL : 8 inpvec :  1
+  27    1.0    0.0    0.00      1.0    kNm    Mz coo: MomentMz Mbdy:blade1 nodenr:   1 coo: hub1
+  28    1.0    0.0    0.00      1.0    kNm    Mx coo: MomentMx Mbdy:blade2 nodenr:   1 coo: hub2
+  29    1.0    0.0    0.00      1.0    kNm    My coo: MomentMy Mbdy:blade2 nodenr:   1 coo: hub2
+  30    1.0    0.0    0.00      1.0    -      DLL inp DLL : 8 inpvec :  2
+  31    1.0    0.0    0.00      1.0    kNm    Mz coo: MomentMz Mbdy:blade2 nodenr:   1 coo: hub2
+  32    1.0    0.0    0.00      1.0    kNm    Mx coo: MomentMx Mbdy:blade3 nodenr:   1 coo: hub3
+  33    1.0    0.0    0.00      1.0    kNm    My coo: MomentMy Mbdy:blade3 nodenr:   1 coo: hub3
+  34    1.0    0.0    0.00      1.0    -      DLL inp DLL : 8 inpvec :  3
+  35    1.0    0.0    0.00      1.0    kNm    Mz coo: MomentMz Mbdy:blade3 nodenr:   1 coo: hub3
+  36    1.0    0.0    0.00      1.0    kNm    Mx coo: MomentMx Mbdy:blade1 nodenr:   1 coo: blade1
+  37    1.0    0.0    0.00      1.0    kNm    My coo: MomentMy Mbdy:blade1 nodenr:   1 coo: blade1
+  38    1.0    0.0    0.00      1.0    -      DLL inp DLL : 8 inpvec :  4
+  39    1.0    0.0    0.00      1.0    kNm    Mz coo: MomentMz Mbdy:blade1 nodenr:   1 coo: blade1
+  40    1.0    0.0    0.00      1.0    kNm    Mx coo: MomentMx Mbdy:blade2 nodenr:   1 coo: blade2
+  41    1.0    0.0    0.00      1.0    kNm    My coo: MomentMy Mbdy:blade2 nodenr:   1 coo: blade2
+  42    1.0    0.0    0.00      1.0    -      DLL inp DLL : 8 inpvec :  5
+  43    1.0    0.0    0.00      1.0    kNm    Mz coo: MomentMz Mbdy:blade2 nodenr:   1 coo: blade2
+  44    1.0    0.0    0.00      1.0    kNm    Mx coo: MomentMx Mbdy:blade3 nodenr:   1 coo: blade3
+  45    1.0    0.0    0.00      1.0    kNm    My coo: MomentMy Mbdy:blade3 nodenr:   1 coo: blade3
+  46    1.0    0.0    0.00      1.0    -      DLL inp DLL : 8 inpvec :  6
+  47    1.0    0.0    0.00      1.0    kNm    Mz coo: MomentMz Mbdy:blade3 nodenr:   1 coo: blade3
+  48    1.0    0.0    0.00      1.0    kNm    Mx coo: MomentMx Mbdy:blade1 nodenr:  33 coo: blade1
+  49    1.0    0.0    0.00      1.0    kNm    My coo: MomentMy Mbdy:blade1 nodenr:  33 coo: blade1
+  50    1.0    0.0    0.00      1.0    -      DLL inp DLL : 8 inpvec :  7
+  51    1.0    0.0    0.00      1.0    kNm    Mz coo: MomentMz Mbdy:blade1 nodenr:  33 coo: blade1
+  52    1.0    0.0    0.00      1.0    kNm    Mx coo: MomentMx Mbdy:blade2 nodenr:  33 coo: blade2
+  53    1.0    0.0    0.00      1.0    kNm    My coo: MomentMy Mbdy:blade2 nodenr:  33 coo: blade2
+  54    1.0    0.0    0.00      1.0    -      DLL inp DLL : 8 inpvec :  8
+  55    1.0    0.0    0.00      1.0    kNm    Mz coo: MomentMz Mbdy:blade2 nodenr:  33 coo: blade2
+  56    1.0    0.0    0.00      1.0    kNm    Mx coo: MomentMx Mbdy:blade3 nodenr:  33 coo: blade3
+  57    1.0    0.0    0.00      1.0    kNm    My coo: MomentMy Mbdy:blade3 nodenr:  33 coo: blade3
+  58    1.0    0.0    0.00      1.0    -      DLL inp DLL : 8 inpvec :  9
+  59    1.0    0.0    0.00      1.0    kNm    Mz coo: MomentMz Mbdy:blade3 nodenr:  33 coo: blade3
+  60    1.0    0.0    0.00      1.0    kNm    Mx coo: MomentMx Mbdy:shaft nodenr:   4 coo: nacelle
+  61    1.0    0.0    0.00      1.0    kNm    My coo: MomentMy Mbdy:shaft nodenr:   4 coo: nacelle
+  62    1.0    0.0    0.00      1.0    kNm    Mz coo: MomentMz Mbdy:shaft nodenr:   4 coo: nacelle
+  63    1.0    0.0    0.00      1.0    -      DLL inp DLL : 8 inpvec : 10
+  64    1.0    0.0    0.00      1.0    kNm    Mx coo: MomentMx Mbdy:shaft nodenr:   4 coo: shaft
+  65    1.0    0.0    0.00      1.0    kNm    My coo: MomentMy Mbdy:shaft nodenr:   4 coo: shaft
+  66    1.0    0.0    0.00      1.0    kNm    Mz coo: MomentMz Mbdy:shaft nodenr:   4 coo: shaft
+  67    1.0    0.0    0.00      1.0    -      DLL inp DLL : 8 inpvec : 11
+  68    1.0    0.0    0.00      1.0    kNm    Mx coo: MomentMx Mbdy:tower nodenr:  27 coo: tower
+  69    1.0    0.0    0.00      1.0    kNm    My coo: MomentMy Mbdy:tower nodenr:  27 coo: tower
+  70    1.0    0.0    0.00      1.0    -      DLL inp DLL : 8 inpvec : 13
+  71    1.0    0.0    0.00      1.0    kNm    Mz coo: MomentMz Mbdy:tower nodenr:  27 coo: tower
+  72    1.0    0.0    0.00      1.0    kNm    Mx coo: MomentMx Mbdy:tower nodenr:   1 coo: tower
+  73    1.0    0.0    0.00      1.0    kNm    My coo: MomentMy Mbdy:tower nodenr:   1 coo: tower
+  74    1.0    0.0    0.00      1.0    -      DLL inp DLL : 8 inpvec : 14
+  75    1.0    0.0    0.00      1.0    kNm    Mz coo: MomentMz Mbdy:tower nodenr:   1 coo: tower
+  76    1.0    0.0    0.00      1.0    m      State p State pos x  Mbdy:blade1 E-nr:  67 Z-rel:1.00 coo: blade1
+  77    1.0    0.0    0.00      1.0    m      State p State pos x  Mbdy:blade2 E-nr:  67 Z-rel:1.00 coo: blade2
+  78    1.0    0.0    0.00      1.0    m      State p State pos x  Mbdy:blade3 E-nr:  67 Z-rel:1.00 coo: blade3
+  79    1.0    0.0    0.00      1.0    -      DLL inp DLL : 9 inpvec :  1
+  80    1.0    0.0    0.00      1.0    m/s^2  State a State acc x  Mbdy:mainframe E-nr:   1 Z-rel:1.00 coo: mainframe
+  81    1.0    0.0    0.00      1.0    m/s^2  State a State acc y  Mbdy:mainframe E-nr:   1 Z-rel:1.00 coo: mainframe
+  82    1.0    0.0    0.00      1.0    m/s    WSP Vx, Wind speed Vx of blade  1 at radius  46.74, global coo.
+  83    1.0    0.0    0.00      1.0    deg    Alfa, R Angle of attack of blade  1 at radius  46.74
+  84    1.0    0.0    0.00      1.0    deg    Cl, R=  Cl of blade  1 at radius  46.74
+  85    1.0    0.0    0.00      1.0    deg    Cd, R=  Cd of blade  1 at radius  46.74
+  86    1.0    0.0    0.00      1.0    deg    Cm, R=  Cm of blade  1 at radius  46.74
