@@ -4,12 +4,13 @@ import inspect
 from Hawc2io import ReadHawc2
 import pandas as pd
 import pathlib as path
-from
 
-def hawc2_reader(sims_path: str| ):
+from load_arena.data_reader import LoadArenaConfig
+
+def hawc2_reader(sims_path: str | list[str] ):
 
     data = ReadHawc2(
-        r"d:\Projects\Simulation_results\Hawc2\dlc13\dlc13_wsp11_wdir0_s011001"
+        sims_path
     )
 
     # res_file = data.ReadFLEX()
@@ -26,5 +27,9 @@ def hawc2_reader(sims_path: str| ):
 
 
 if __name__ == "__main__":
+    LoadArenaConfig(sims_path=path.Path(r"d:\Projects\Simulation_results\Hawc2\dlc13\dlc13_wsp11_wdir0_s011001"))
+    print(LoadArenaConfig.sims_path)
+    
+    df_h2 = hawc2_reader(LoadArenaConfig.sims_path)
 
-    df_h2 = hawc2_reader()
+

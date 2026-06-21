@@ -1,5 +1,5 @@
 import dataclasses
-import pathlib as path
+from pathlib import Path
 
 
 @dataclass
@@ -9,5 +9,7 @@ class LoadArenaConfig:
 
     """
 
-    def __init__(self):
-        self.path_
+    def __init__(self, sims_path: str | Path) -> None:
+        self.sims_path: str | Path =  sims_path
+
+        
