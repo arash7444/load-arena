@@ -7,14 +7,15 @@ import pathlib as path
 
 from load_arena.data_reader import LoadArenaConfig
 
-def hawc2_reader(sims_path: str | list[str] ):
 
-    data = ReadHawc2(
-        sims_path
-    )
+def hawc2_reader(sims_path: str | list[str]):
+
+    data = ReadHawc2(sims_path)
 
     # res_file = data.ReadFLEX()
-    res_file = data.ReadAll() # TODO: check if this is the same as ReadFLEX, and if not, what is the difference
+    res_file = (
+        data.ReadAll()
+    )  # TODO: check if this is the same as ReadFLEX, and if not, what is the difference
 
     sensor_data = data.ChInfo[0]
 
@@ -27,9 +28,9 @@ def hawc2_reader(sims_path: str | list[str] ):
 
 
 if __name__ == "__main__":
-    LoadArenaConfig(sims_path=path.Path(r"d:\Projects\Simulation_results\Hawc2\dlc13\dlc13_wsp11_wdir0_s011001"))
-    print(LoadArenaConfig.sims_path)
-    
-    df_h2 = hawc2_reader(LoadArenaConfig.sims_path)
+    config = LoadArenaConfig(
+        sims_path=path.Path(r".h2_res\dlc13\dlc13_wsp11_wdir0_s011001")
+    )
+    print(config.sims_path)
 
-
+    df_h2 = hawc2_reader(config.sims_path)
