@@ -1,35 +1,38 @@
 # import wetb
 import pkgutil
 import inspect
-from Hawc2io import ReadHawc2
 import pandas as pd
 import pathlib as path
 
 from load_arena.data_reader import LoadArenaConfig
 
+# from load_arena.data_reader import FLEXOutFile
+from load_arena.data_reader import ReadHawc2
+from load_arena.data_reader.Hawc2io import toDataFrame
+
 
 def hawc2_reader(sims_path: str | list[str]):
+    # out = FLEXOutFile(sims_path)
+    # df = out._toDataFrame()
+    # print(df.head())
 
-    data = ReadHawc2(sims_path)
+    res_file = ReadHawc2(sims_path)
+    info = {}
+    data = res_file.ReadAll()
+    info["attribute_names"] = res_file.ChInfo[0]
+    info["attribute_units"] = res_file.ChInfo[1]
+    info["attribute_descr"] = res_file.ChInfo[2]
+    df_2 = toDataFrame(data, info)
+    print(df_2.head())
 
-    # res_file = data.ReadFLEX()
-    res_file = (
-        data.ReadAll()
-    )  # TODO: check if this is the same as ReadFLEX, and if not, what is the difference
-
-    sensor_data = data.ChInfo[0]
-
-    print(res_file)
-
-    df = pd.DataFrame(res_file, columns=sensor_data)
-    # df.insert(0, "Time", data.t) # used when using ReadFLEX, but not needed when using ReadAll, as it already includes the time column
-
-    print(df.head())
+    return df_2
 
 
 if __name__ == "__main__":
     config = LoadArenaConfig(
-        sims_path=path.Path(r".h2_res\dlc13\dlc13_wsp11_wdir0_s011001")
+        sims_path=path.Path(
+            r"e:\Projects\Git_Arash\load-arena\tests\h2_res\dlc13\\dlc13_wsp04_wdir000_s023004.int"
+        )
     )
     print(config.sims_path)
 
