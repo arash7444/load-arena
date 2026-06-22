@@ -1,30 +1,11 @@
 # -*- coding: utf-8 -*-
 """
-Author:
-    Bjarne S. Kallesoee
 
 
 Description:
     Reads all HAWC2 output data formats, HAWC2 ascii, HAWC2 binary and FLEX
 
-call ex.:
-    # creat data file object, call without extension, but with parth
-    file = ReadHawc2("HAWC2ex/tests")
-    # if called with ReadOnly = 1 as
-    file = ReadHawc2("HAWC2ex/tests",ReadOnly=1)
-    # no channels a stored in memory, otherwise read channels are stored for reuse
 
-    # channels are called by a list
-    file([0,2,1,1])  => channels 1,3,2,2
-    # if empty all channels are returned
-    file()  => all channels as 1,2,3,...
-    file.t => time vector
-
-1. version: 19/4-2011
-2. version: 5/11-2015 fixed columns to get description right, fixed time vector (mmpe@dtu.dk)
-
-Need to be done:
-    * add error handling for allmost every thing
 
 """
 
