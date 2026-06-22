@@ -1,20 +1,39 @@
 # import wetb
 import pkgutil
 import inspect
-from Hawc2io import ReadHawc2
 import pandas as pd
+import pathlib as path
 
-# help(wetb)
-data = ReadHawc2(
-    r"e:\Projects\Projects\HAWC2_sims\W4000_130\res\dlc13\dlc13_wsp04_wdir000_s023004"
-)
-res_file = data.ReadFLEX()
-sensor_data = data.ChInfo
-print(res_file)
+from load_arena.data_reader import LoadArenaConfig
 
-df = pd.DataFrame(res_file, columns=sensor_data[0][1:])
-df.insert(0, "Time", data.t)
+# from load_arena.data_reader import FLEXOutFile
+from load_arena.data_reader import ReadHawc2
+from load_arena.data_reader.Hawc2io import toDataFrame
 
-print(df.head())
-# for module in pkgutil.iter_modules(wetb.__path__):
-#     print(module.name)
+
+def hawc2_reader(sims_path: str | list[str]):
+    # out = FLEXOutFile(sims_path)
+    # df = out._toDataFrame()
+    # print(df.head())
+
+    res_file = ReadHawc2(sims_path)
+    info = {}
+    data = res_file.ReadAll()
+    info["attribute_names"] = res_file.ChInfo[0]
+    info["attribute_units"] = res_file.ChInfo[1]
+    info["attribute_descr"] = res_file.ChInfo[2]
+    df_2 = toDataFrame(data, info)
+    print(df_2.head())
+
+    return df_2
+
+
+if __name__ == "__main__":
+    config = LoadArenaConfig(
+        sims_path=path.Path(
+            r"e:\Projects\Git_Arash\load-arena\tests\h2_res\dlc13\\dlc13_wsp04_wdir000_s023004.int"
+        )
+    )
+    print(config.sims_path)
+
+    df_h2 = hawc2_reader(config.sims_path)

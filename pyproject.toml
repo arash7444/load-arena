@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "load_arena"
+version = "0.1.0"
+description = "A Python toolkit for comparing and post-processing IEC 61400 wind turbine aeroelastic simulation results."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "numpy",
+	"plotly",
+	"seaborn",
+    "pandas",
+    "matplotlib",
+	"scipy",
+	"xarray",
+	"scipy",
+]
+[tool.setuptools.packages.find]
+where = ["src"]

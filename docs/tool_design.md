@@ -42,6 +42,9 @@ flowchart TD
 - Ranking plots
 - Report generation
 - Machine learning based prediction/forecasting
+- Blade Load rose
+- Blade Load Duration Damage (LDD)
+- 
 
 ## Internal data model
 
