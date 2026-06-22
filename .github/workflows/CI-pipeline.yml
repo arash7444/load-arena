@@ -10,6 +10,7 @@ on:
       - "src/**"
       - "tests/**"
       - ".github/workflows/CI-pipeline.yml"
+      - "pyproject.toml"
   pull_request:
     branches:
       - main
@@ -18,6 +19,7 @@ on:
       - "src/**"
       - "tests/**"
       - ".github/workflows/CI-pipeline.yml"
+      - "pyproject.toml"
 
 # ==================================================
 # SECTION 2: BUILD AND TEST JOB
@@ -47,15 +49,12 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: "pip"
-          cache-dependency-path: requirements.txt
+          cache-dependency-path: pyproject.toml
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -e .
-          pip install pytest
-#          pip install pytest pytest-cov
+          python -m pip install -e ".[test]"
 
       - name: Run tests
         run: pytest  
