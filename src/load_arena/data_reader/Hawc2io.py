@@ -27,9 +27,11 @@ Need to be done:
     * add error handling for allmost every thing
 
 """
-import pandas as pd
-import numpy as np
 import os
+import warnings
+
+import numpy as np
+import pandas as pd
 
 
 ################################################################################
@@ -65,9 +67,8 @@ class ReadHawc2(object):
         # read *.sel hawc2 output file for result info
         if self.FileName.lower().endswith(".sel"):
             self.FileName = self.FileName[:-4]
-        fid = open(self.FileName + ".sel", "r")
-        Lines = fid.readlines()
-        fid.close()
+        with open(self.FileName + ".sel", "r") as fid:
+            Lines = fid.readlines()
         if Lines[0].lower().find("bhawc") >= 0:
             # --- Find line with scan info
             iLine = 0
@@ -166,13 +167,14 @@ class ReadHawc2(object):
     def _ReadSensorFile(self):
         # read sensor file used if results are saved in FLEX format
         DirName = os.path.dirname(self.FileName)
+        sensor_file = os.path.join(DirName, "sensor")
         try:
-            fid = open(DirName + r"\sensor ", "r")
-        except IOError:
-            print("can't finde sensor file for FLEX format")
-            return
-        Lines = fid.readlines()
-        fid.close()
+            with open(sensor_file, "r") as fid:
+                Lines = fid.readlines()
+        except IOError as exc:
+            raise FileNotFoundError(
+                f"Cannot find sensor file for FLEX format: {sensor_file}"
+            ) from exc
         # reads channel info (name, unit and description)
         self.NrCh = 0
         Name = []
@@ -191,28 +193,30 @@ class ReadHawc2(object):
             Description.append(temp.strip())
         self.ChInfo = [Name, Unit, Description]
         # read general info from *.int file
-        fid = open(self.FileName, "rb")
-        fid.seek(4 * 19)
-        if not np.fromfile(fid, "int32", 1) == self.NrCh:
-            print("number of sensors in sensor file and data file are not consisten")
-        fid.seek(4 * (self.NrCh) + 4, 1)
-        self.Version = np.fromfile(fid, "int32", 1)[0]
-        time_start, time_step = np.fromfile(fid, "f", 2)
-        self.Freq = 1 / time_step
-        self.ScaleFactor = np.fromfile(fid, "f", self.NrCh)
-        fid.seek(2 * 4 * self.NrCh + 48 * 2)
-        self.NrSc = int(len(np.fromfile(fid, "int16")) / self.NrCh)
-        self.Time = self.NrSc * time_step
-        self.t = np.arange(0, self.Time, time_step) + time_start
-        fid.close()
+        with open(self.FileName, "rb") as fid:
+            fid.seek(4 * 19)
+            nr_ch_in_file = int(np.fromfile(fid, "int32", 1)[0])
+            if nr_ch_in_file != self.NrCh:
+                warnings.warn(
+                    "number of sensors in sensor file and data file are not consistent",
+                    RuntimeWarning,
+                    stacklevel=2,
+                )
+            fid.seek(4 * (self.NrCh) + 4, 1)
+            self.Version = np.fromfile(fid, "int32", 1)[0]
+            time_start, time_step = np.fromfile(fid, "f", 2)
+            self.Freq = 1 / time_step
+            self.ScaleFactor = np.fromfile(fid, "f", self.NrCh)
+            fid.seek(2 * 4 * self.NrCh + 48 * 2)
+            self.NrSc = int(len(np.fromfile(fid, "int16")) / self.NrCh)
+            self.Time = self.NrSc * time_step
+            self.t = np.arange(0, self.Time, time_step) + time_start
 
     ################################################################################
     # init function, load channel and other general result file info
     def __init__(self, FileName, ReadOnly=0):
+        FileName = str(FileName)
         self.FileName = FileName
-        FileName = str(
-            FileName
-        )  # Arash: to avoid error when FileName is a Path object, convert it to string
         self.ReadOnly = ReadOnly
         self.Iknown = []  # to keep track of what has been read all ready
         self.Data = np.zeros(0)
@@ -272,14 +276,13 @@ class ReadHawc2(object):
         ChVec = [] if ChVec is None else ChVec
         if not ChVec:
             ChVec = range(1, self.NrCh)
-        fid = open(self.FileName, "rb")
-        fid.seek(2 * 4 * self.NrCh + 48 * 2)
-        temp = np.fromfile(fid, "int16")
+        with open(self.FileName, "rb") as fid:
+            fid.seek(2 * 4 * self.NrCh + 48 * 2)
+            temp = np.fromfile(fid, "int16")
         if self.Version == 3:
             temp = temp.reshape(self.NrCh, self.NrSc).transpose()
         else:
             temp = temp.reshape(self.NrSc, self.NrCh)
-        fid.close()
         return np.dot(temp[:, ChVec], np.diag(self.ScaleFactor[ChVec]))
 
     ################################################################################
@@ -325,8 +328,7 @@ class ReadHawc2(object):
         if not ChVec:
             ChVec = range(0, self.NrCh)
         elif max(ChVec) >= self.NrCh:
-            print("to high channel number")
-            return
+            raise ValueError("too high channel number")
         # if ReadOnly, read data but no storeing in memory
         if self.ReadOnly:
             return self.ReadAll(ChVec)
@@ -339,7 +341,7 @@ class ReadHawc2(object):
             for i in ChVec:
                 try:
                     I1.append(self.Iknown.index(i))
-                except:
+                except ValueError:
                     self.Iknown.append(i)
                     I2.append(i)
                     I1.append(len(I1))
@@ -361,7 +363,7 @@ def toDataFrame(data, info):
     import re
 
     # Simplify output names
-    names = info["attribute_names"]
+    names = list(info["attribute_names"])
     for i, desc in enumerate(info["attribute_descr"]):
         elem = re.findall(r"E-nr:\s*(\d+)", desc)
         zrel = re.findall(r"Z-rel:\s*(\d+.\d+)", desc)

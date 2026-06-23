@@ -11,12 +11,22 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "numpy",
-	"plotly",
-	"seaborn",
+    "plotly",
+    "seaborn",
     "pandas",
     "matplotlib",
-	"scipy",
-	"xarray",
+    "scipy",
+    "xarray",
 ]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+]
+
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
