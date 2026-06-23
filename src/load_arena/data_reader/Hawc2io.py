@@ -1,35 +1,35 @@
 # -*- coding: utf-8 -*-
 """
+Author:
+    Bjarne S. Kallesoee
 
 
 Description:
     Reads all HAWC2 output data formats, HAWC2 ascii, HAWC2 binary and FLEX
 
+call ex.:
+    # creat data file object, call without extension, but with parth
+    file = ReadHawc2("HAWC2ex/tests")
+    # if called with ReadOnly = 1 as
+    file = ReadHawc2("HAWC2ex/tests",ReadOnly=1)
+    # no channels a stored in memory, otherwise read channels are stored for reuse
 
+    # channels are called by a list
+    file([0,2,1,1])  => channels 1,3,2,2
+    # if empty all channels are returned
+    file()  => all channels as 1,2,3,...
+    file.t => time vector
+
+1. version: 19/4-2011
+2. version: 5/11-2015 fixed columns to get description right, fixed time vector (mmpe@dtu.dk)
+
+Need to be done:
+    * add error handling for allmost every thing
 
 """
-
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
-from __future__ import absolute_import
-from builtins import int
-from builtins import range
-from io import open as opent
-from builtins import str
-from future import standard_library
 import pandas as pd
-
-standard_library.install_aliases()
-from builtins import object
 import numpy as np
 import os
-
-# from wetb import gtsdf
-
-# FIXME: numpy doesn't like io.open binary fid in PY27, why is that? As a hack
-# workaround, use opent for PY23 compatibility when handling text files,
-# and default open for binary
 
 
 ################################################################################
@@ -65,7 +65,7 @@ class ReadHawc2(object):
         # read *.sel hawc2 output file for result info
         if self.FileName.lower().endswith(".sel"):
             self.FileName = self.FileName[:-4]
-        fid = opent(self.FileName + ".sel", "r")
+        fid = open(self.FileName + ".sel", "r")
         Lines = fid.readlines()
         fid.close()
         if Lines[0].lower().find("bhawc") >= 0:
@@ -167,7 +167,7 @@ class ReadHawc2(object):
         # read sensor file used if results are saved in FLEX format
         DirName = os.path.dirname(self.FileName)
         try:
-            fid = opent(DirName + r"\sensor ", "r")
+            fid = open(DirName + r"\sensor ", "r")
         except IOError:
             print("can't finde sensor file for FLEX format")
             return
