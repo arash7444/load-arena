@@ -1,0 +1,95 @@
+
+name: Test and Deploy Pipeline CI/CD
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+    paths:
+      - "src/**"
+      - "tests/**"
+      - ".github/workflows/CI-pipeline.yml"
+      - "pyproject.toml"
+  pull_request:
+    branches:
+      - main
+      - dev
+    paths:
+      - "src/**"
+      - "tests/**"
+      - ".github/workflows/CI-pipeline.yml"
+      - "pyproject.toml"
+
+# ==================================================
+# SECTION 2: BUILD AND TEST JOB
+# ==================================================
+
+jobs:
+  
+  build-and-test:
+    runs-on: ${{ matrix.os }}
+    
+    strategy: 
+      matrix: 
+        os: [windows-latest, ubuntu-latest]
+        python-version: ["3.10"]
+    
+    steps:
+    # Add steps for:
+    # 1. Checkout code
+    # 2. Set up Python 3.10 or higher with pip caching
+    # 3. Install dependencies from requirements.txt
+    # 4. Run pytest with coverage reporting
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: "pip"
+          cache-dependency-path: pyproject.toml
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e ".[test]"
+
+      - name: Run tests
+        run: pytest  
+
+# # ==================================================
+# # SECTION 3: DOCKER BUILD AND DEPLOY
+# # ==================================================
+   # docker-build:
+     # needs: build-and-test
+     # runs-on: ubuntu-latest
+
+
+# #     # Add steps for:
+# #     # 1. Checkout code  
+# #     # 2. Set up Docker Buildx
+# #     # 3. Login to container registry
+# #     # 4. Build and push Docker image with multiple tags
+     # steps:
+       # - name: Checkout code
+         # uses: actions/checkout@v4
+
+       # - name: Set up Docker Buildx
+         # uses: docker/setup-buildx-action@v3
+
+       # - name: Login to Docker Hub
+         # uses: docker/login-action@v3
+         # with:
+           # username: ${{ secrets.DOCKER_USERNAME }}
+           # password: ${{ secrets.DOCKER_PASSWORD }}
+
+       # - name: Build and push Docker image
+         # uses: docker/build-push-action@v5
+         # with:
+           # context: .
+           # push: true
+           # tags: |
+               # ${{ secrets.DOCKER_USERNAME }}/data-pipeline:latest
+               # ${{ secrets.DOCKER_USERNAME }}/data-pipeline:${{ github.sha }}

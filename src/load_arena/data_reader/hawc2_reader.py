@@ -31,7 +31,7 @@ def hawc2_reader(sims_path: str | list[str]):
 if __name__ == "__main__":
     config = LoadArenaConfig(
         sims_path=path.Path(
-            r"e:\Projects\Git_Arash\load-arena\tests\h2_res\dlc13\\dlc13_wsp04_wdir000_s023004.int"
+            r".\tests\h2_res\dlc13\dlc13_wsp04_wdir000_s023004.int"
         )
     )
     print(config.sims_path)

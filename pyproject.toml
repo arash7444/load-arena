@@ -17,7 +17,6 @@ dependencies = [
     "matplotlib",
 	"scipy",
 	"xarray",
-	"scipy",
 ]
 [tool.setuptools.packages.find]
 where = ["src"]
