@@ -5,11 +5,10 @@ from load_arena.data_reader.Hawc2io import toDataFrame
 from load_arena.data_reader.load_arena_config import LoadArenaConfig
 from pathlib import Path
 
-
 def test_read_hawc2_flex():
 
     config = LoadArenaConfig(
-        sims_path=Path.Path(
+        sims_path=Path(
             r".\tests\h2_res\dlc13\dlc13_wsp04_wdir000_s023004"
         )
     )
@@ -26,7 +25,7 @@ def test_read_hawc2_flex():
 def test_read_hawc2_sel():
     
     config = LoadArenaConfig(
-    sims_path=Path.Path(
+    sims_path=Path(
         r".\tests\h2_res\sel_res\nrel_5mw_reference_wind_turbine"
     )
 )
@@ -40,3 +39,7 @@ def test_read_hawc2_sel():
     # df = pd.DataFrame(results, columns=channelinfo[0])
     azimuth = df_2["bea1angle_[deg]"].max().round(0)
     assert azimuth == 360, f"Azimuth is {azimuth} and should be 360"
+
+if __name__ == "__main__":
+    test_read_hawc2_flex()
+    test_read_hawc2_sel()
