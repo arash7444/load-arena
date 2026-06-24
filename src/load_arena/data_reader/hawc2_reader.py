@@ -1,3 +1,4 @@
+from logging import config
 import pathlib as path
 
 from load_arena.data_reader import LoadArenaConfig
@@ -5,25 +6,45 @@ from load_arena.data_reader import ReadHawc2
 from load_arena.data_reader.Hawc2io import toDataFrame
 
 
-def hawc2_reader(sims_path: str | path.Path):
-    res_file = ReadHawc2(sims_path)
-    data = res_file.ReadAll()
-    info = {
-        "attribute_names": res_file.ChInfo[0],
-        "attribute_units": res_file.ChInfo[1],
-        "attribute_descr": res_file.ChInfo[2],
-    }
 
-    return toDataFrame(data, info)
+
+def test_read_hawc2_flex():
+
+    config = LoadArenaConfig(
+        sims_path=path.Path(
+            r".\tests\h2_res\dlc13\dlc13_wsp04_wdir000_s023004"
+        )
+    )
+    res_file = ReadHawc2(config.sims_path)
+    data = res_file.ReadAll()
+
+    info = res_file.ChInfo
+    df_1 = toDataFrame(data, info)
+
+    azimuth = df_1["Azi1_[deg]"].max().round(0)
+    assert azimuth == 180, f"Azimuth is {azimuth} and should be 180"
+
+
+def test_read_hawc2_sel():
+    config = LoadArenaConfig(
+    sims_path=path.Path(
+        r".\tests\h2_res\sel_res\nrel_5mw_reference_wind_turbine"
+    )
+)
+
+    res_file_2 = ReadHawc2(config.sims_path)
+
+    results = res_file_2.ReadAll()
+    channelinfo = res_file_2.ChInfo
+    df_2 = toDataFrame(results, channelinfo)
+
+    # df = pd.DataFrame(results, columns=channelinfo[0])
+    azimuth = df_2["bea1angle_[deg]"].max().round(0)
+    assert azimuth == 360, f"Azimuth is {azimuth} and should be 360"
+
 
 
 if __name__ == "__main__":
-    config = LoadArenaConfig(
-        sims_path=path.Path(
-            r".\tests\h2_res\dlc13\dlc13_wsp04_wdir000_s023004.int"
-        )
-    )
-    print(config.sims_path)
+    test_read_hawc2_flex()
+    test_read_hawc2_sel()
 
-    df_h2 = hawc2_reader(config.sims_path)
-    print(df_h2.head())

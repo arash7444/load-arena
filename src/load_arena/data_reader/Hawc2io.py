@@ -363,8 +363,11 @@ def toDataFrame(data, info):
     import re
 
     # Simplify output names
-    names = list(info["attribute_names"])
-    for i, desc in enumerate(info["attribute_descr"]):
+    names = info[0]
+    units = info[1]
+    descriptions = info[2]
+
+    for i, desc in enumerate(descriptions):
         elem = re.findall(r"E-nr:\s*(\d+)", desc)
         zrel = re.findall(r"Z-rel:\s*(\d+.\d+)", desc)
         node = re.findall(r"nodenr:\s*(\d+)", desc)
@@ -398,10 +401,10 @@ def toDataFrame(data, info):
             pref += "N" + node[0]
         names[i] = pref + names[i]
 
-    if info["attribute_units"] is not None:
+    if units is not None:
         units = [
             u.replace("(", "").replace(")", "").replace("[", "").replace("]", "")
-            for u in info["attribute_units"]
+            for u in units
         ]
 
         cols = [n + "_[" + u + "]" for n, u in zip(names, units)]

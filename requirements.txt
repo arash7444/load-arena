@@ -6,5 +6,5 @@ matplotlib
 scipy
 xarray
 pytest 
- 
+rich
  
