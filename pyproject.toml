@@ -17,6 +17,7 @@ dependencies = [
     "matplotlib",
     "scipy",
     "xarray",
+	"openpyxl",
 ]
 
 [project.optional-dependencies]

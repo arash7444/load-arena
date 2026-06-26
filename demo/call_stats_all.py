@@ -34,5 +34,7 @@ console.print(stats_hawc2.mean.columns)
 
 
 fig, ax = plt.subplots(figsize=(10, 6))
-plt.plot(stats_hawc2.mean.iloc[:,1], stats_hawc2.mean['Aerot._[kW]'], label='Mean Aerot. [kW]', color='blue', linestyle='-', marker='o')
+plt.plot(stats_hawc2.mean.iloc[:,1], stats_hawc2.mean['Aerot._[kW]'], label='Mean Aerot. [kW]', color='blue', linestyle='', marker='o')
+plt.grid()
+
 plt.show()

@@ -47,6 +47,26 @@ def calc_stats(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
         stat_max: pd.DataFrame
             DataFrame containing the maximum value of each column.
 
+    Example:
+    --------
+        >>> df = pd.DataFrame({
+        ...     'A': [1, 2, 3],
+        ...     'B': [4, 5, 6]
+        ... })
+        >>> stat_mean, stat_std, stat_min, stat_max = calc_stats(df)
+        >>> print(stat_mean)
+           A    B
+        0  2.0  5.0
+        >>> print(stat_std)
+           A    B
+        0  1.0  1.0
+        >>> print(stat_min)
+           A    B
+        0  1.0  4.0
+        >>> print(stat_max)
+           A    B
+        0  3.0  6.0
+
     """
         
     # config = LoadArenaConfig(
