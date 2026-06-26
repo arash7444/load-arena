@@ -1,3 +1,6 @@
+import seaborn as sns
+import matplotlib.pyplot as plt
+
 import pandas as pd
 import numpy as np
 import pathlib as path
@@ -26,3 +29,10 @@ stats_hawc2 = concatenate_stats(list_files=list_files)
 console.print(stats_hawc2.mean)
 
 console.print(stats_hawc2.filename)
+
+console.print(stats_hawc2.mean.columns)
+
+
+fig, ax = plt.subplots(figsize=(10, 6))
+plt.plot(stats_hawc2.mean.iloc[:,1], stats_hawc2.mean['Aerot._[kW]'], label='Mean Aerot. [kW]', color='blue', linestyle='-', marker='o')
+plt.show()
