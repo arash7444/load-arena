@@ -1,3 +1,4 @@
+
 import seaborn as sns
 import matplotlib.pyplot as plt
 
@@ -19,39 +20,22 @@ from load_arena.process.simple_stats import calc_stats
 from load_arena.utils import find_files
 from load_arena.process.concatenate_stats import All_stats, concatenate_stats
 from load_arena.case_loader import read_input_file
+from load_arena.process.family_avg import FamilyAvg, calc_family_avg
 
 
-# # # use a simple way: just provide the folder name and extension or read from input file
-# list_files = find_files(folder_name=r".\tests\h2_res\dlc13", file_extension=".int")
 
 file_name = r".\tests\input_file\input_file.csv"
 df_input = read_input_file(file_name)
-# list_files = df_input["Folder"] + df_input["Timeseries"]
+list_files = df_input["Folder"] + df_input["Timeseries"]
 
 all_stats_hawc2 = concatenate_stats(input_file_df=df_input)
 
-console.print(all_stats_hawc2.mean)
-
-console.print(all_stats_hawc2.filename)
-
-console.print(all_stats_hawc2.mean.columns)
+family_stats = calc_family_avg(all_stats_hawc2, df_input)
 
 
-fig, ax = plt.subplots(figsize=(10, 6))
-plt.plot(
-    all_stats_hawc2.mean.iloc[:, 1],
-    all_stats_hawc2.mean["Aerot._[kW]"],
-    label="Mean Aerot. [kW]",
-    color="blue",
-    linestyle="",
-    marker="o",
-)
-plt.grid()
-
-plt.show(block=False)
-
-console.print("----------------------------------")
-
-input("Press Enter to exit")
-
-plt.close()
+console.print("Family average mean: \n",family_stats.mean)
+console.print("Family average  std: \n",family_stats.std)
+console.print("Family average min: \n",family_stats.min)
+console.print("Family average max: \n",family_stats.max)
+console.print("Family average filename: \n",family_stats.filename)
+console.print("Family average family_name: \n",family_stats.family_name)
