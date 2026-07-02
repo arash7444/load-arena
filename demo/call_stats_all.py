@@ -54,4 +54,9 @@ console.print("----------------------------------")
 
 input("Press Enter to exit")
 
+console.print("mean: \n",all_stats_hawc2.mean["Aerot._[kW]"])
+
+console.print("----------------------------------")
+
+console.print("mean_plf: \n",all_stats_hawc2.mean_plf["Aerot._[kW]"])
 plt.close()

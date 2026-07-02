@@ -25,6 +25,10 @@ class FamilyAvg:
     std: pd.DataFrame
     min: pd.DataFrame
     max: pd.DataFrame
+    mean_plf: pd.DataFrame
+    std_plf: pd.DataFrame
+    min_plf: pd.DataFrame
+    max_plf: pd.DataFrame
     filename: List[str]
     family_name: List[str]
     
@@ -66,6 +70,10 @@ def calc_family_avg(all_stats: pd.DataFrame, df_input: pd.DataFrame) -> pd.DataF
         std=pd.DataFrame(),
         min=pd.DataFrame(),
         max=pd.DataFrame(),
+        mean_plf=pd.DataFrame(),
+        std_plf=pd.DataFrame(),
+        min_plf=pd.DataFrame(),
+        max_plf=pd.DataFrame(),
         filename=[],
         family_name=[],
     )
@@ -86,6 +94,11 @@ def calc_family_avg(all_stats: pd.DataFrame, df_input: pd.DataFrame) -> pd.DataF
         mask_min = all_stats.min[mask.values]
         mask_max = all_stats.max[mask.values]
 
+        mask_mean_plf = all_stats.mean_plf[mask.values]
+        mask_std_plf = all_stats.std_plf[mask.values]
+        mask_min_plf = all_stats.min_plf[mask.values]
+        mask_max_plf = all_stats.max_plf[mask.values]
+
 
         ## based on averaging method from input file compute average values
         if mask_input == "mean":
@@ -93,16 +106,35 @@ def calc_family_avg(all_stats: pd.DataFrame, df_input: pd.DataFrame) -> pd.DataF
             fam_std = mask_std.mean(axis=0).to_frame().T
             fam_min = mask_min.mean(axis=0).to_frame().T
             fam_max = mask_max.mean(axis=0).to_frame().T
+
+            fam_mean_plf = mask_mean_plf.mean(axis=0).to_frame().T
+            fam_std_plf = mask_std_plf.mean(axis=0).to_frame().T
+            fam_min_plf = mask_min_plf.mean(axis=0).to_frame().T
+            fam_max_plf = mask_max_plf.mean(axis=0).to_frame().T
+
+            
         elif mask_input == "max":
             fam_mean = mask_mean.max(axis=0).to_frame().T # max values of each column
             fam_std = mask_std.max(axis=0).to_frame().T
             fam_min = mask_min.max(axis=0).to_frame().T
             fam_max = mask_max.max(axis=0).to_frame().T
+
+            fam_mean_plf = mask_mean_plf.max(axis=0).to_frame().T
+            fam_std_plf = mask_std_plf.max(axis=0).to_frame().T
+            fam_min_plf = mask_min_plf.max(axis=0).to_frame().T
+            fam_max_plf = mask_max_plf.max(axis=0).to_frame().T
+
+            
         elif mask_input == "mean_max":
             sorted_mean = mask_mean.apply(lambda x: x.sort_values(ascending=False).values)
             sorted_std = mask_std.apply(lambda x: x.sort_values(ascending=False).values)
             sorted_min = mask_min.apply(lambda x: x.sort_values(ascending=False).values)
             sorted_max = mask_max.apply(lambda x: x.sort_values(ascending=False).values)
+
+            sorted_mean_plf = mask_mean_plf.apply(lambda x: x.sort_values(ascending=False).values)
+            sorted_std_plf = mask_std_plf.apply(lambda x: x.sort_values(ascending=False).values)
+            sorted_min_plf = mask_min_plf.apply(lambda x: x.sort_values(ascending=False).values)
+            sorted_max_plf = mask_max_plf.apply(lambda x: x.sort_values(ascending=False).values)
 
             half_len = int(len(mask_mean)/2) # 1/2 of each input time series
             
@@ -111,6 +143,12 @@ def calc_family_avg(all_stats: pd.DataFrame, df_input: pd.DataFrame) -> pd.DataF
             fam_min = sorted_min.iloc[:half_len,:].mean().to_frame().T
             fam_max = sorted_max.iloc[:half_len,:].mean().to_frame().T
 
+            fam_mean_plf = sorted_mean_plf.iloc[:half_len,:].mean().to_frame().T # Take the mean of the top half (rows)
+            fam_std_plf = sorted_std_plf.iloc[:half_len,:].mean().to_frame().T
+            fam_min_plf = sorted_min_plf.iloc[:half_len,:].mean().to_frame().T
+            fam_max_plf = sorted_max_plf.iloc[:half_len,:].mean().to_frame().T
+
+            
 
         family_stats.mean = pd.concat(
             [family_stats.mean, fam_mean],
@@ -129,6 +167,26 @@ def calc_family_avg(all_stats: pd.DataFrame, df_input: pd.DataFrame) -> pd.DataF
 
         family_stats.max = pd.concat(
             [family_stats.max, fam_max],
+            ignore_index=True,
+        )
+
+        family_stats.mean_plf = pd.concat(
+            [family_stats.mean_plf, fam_mean_plf],
+            ignore_index=True,
+        )
+
+        family_stats.std_plf = pd.concat(
+            [family_stats.std_plf, fam_std_plf],
+            ignore_index=True,
+        )
+
+        family_stats.min_plf = pd.concat(
+            [family_stats.min_plf, fam_min_plf],
+            ignore_index=True,
+        )
+
+        family_stats.max_plf = pd.concat(
+            [family_stats.max_plf, fam_max_plf],
             ignore_index=True,
         )
 

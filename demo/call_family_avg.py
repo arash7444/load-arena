@@ -39,3 +39,26 @@ console.print("Family average min: \n",family_stats.min)
 console.print("Family average max: \n",family_stats.max)
 console.print("Family average filename: \n",family_stats.filename)
 console.print("Family average family_name: \n",family_stats.family_name)
+
+
+fig, ax = plt.subplots(figsize=(10, 6))
+plt.plot(
+    all_stats_hawc2.mean.iloc[:, 1],
+    all_stats_hawc2.mean["Aerot._[kW]"],
+    label="Mean Aerot. [kW]",
+    color="blue",
+    linestyle="",
+    marker="o",
+)
+
+plt.plot(
+    family_stats.mean.iloc[:, 1],
+    family_stats.mean["Aerot._[kW]"],
+    label="Mean Aerot. [kW]",
+    color="red",
+    linestyle="",
+    marker="x",
+)
+plt.grid()
+
+plt.show(block=False)
