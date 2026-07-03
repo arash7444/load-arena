@@ -54,11 +54,17 @@ plt.plot(
 plt.plot(
     family_stats.mean.iloc[:, 1],
     family_stats.mean["Aerot._[kW]"],
-    label="Mean Aerot. [kW]",
+    label="Family avg Aerot. [kW]",
     color="red",
     linestyle="",
     marker="x",
 )
 plt.grid()
-
+plt.legend()
+plt.xlabel("Time [s]")
+plt.ylabel("Aerot. [kW]")
 plt.show(block=False)
+console.print("----------------------------------")
+
+input("Press Enter to exit")
+plt.close(fig)
