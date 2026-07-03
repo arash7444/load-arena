@@ -1,0 +1,8 @@
+So far we have calculated stats for each simulation and for each family. Now i want to make a new feature to calculate extreme loads ( or Ultimate loads).
+
+the output of Family_avg.py is "family_stats"
+then let's call the extreme values or Ultimate values as "ULS values". ULS values must be the maximum values of each channel (or column) among all values in family stats. It should be saved as Dataframe called ULS.
+Then similar to ULS values, extreme value should be calculated for each family then saved as Family_ULS.
+ULS values should be absolute maximum meaning if abs. of min is bigger than abs. of max. then the extereme value should be min value.
+
+tell me your plan but do not modify to   anything yet.
