@@ -7,8 +7,9 @@ from rich.console import Console
 from typing import List, Dict
 console = Console()
 
-from load_arena.process.concatenate_stats import concatenate_stats
+from load_arena.process.concatenate_stats import All_stats, concatenate_stats
 from load_arena.case_loader import read_input_file
+from load_arena.case_loader.input_reader import validate_input_columns
 
 from load_arena.data_reader import LoadArenaConfig
 from load_arena.data_reader import ReadHawc2
@@ -20,7 +21,6 @@ from load_arena.utils import find_files
 
 @dataclass
 class FamilyAvg:
-    family_name: str
     mean: pd.DataFrame
     std: pd.DataFrame
     min: pd.DataFrame
@@ -33,7 +33,7 @@ class FamilyAvg:
     family_name: List[str]
     
 
-def calc_family_avg(all_stats: pd.DataFrame, df_input: pd.DataFrame) -> pd.DataFrame:
+def calc_family_avg(all_stats: All_stats, df_input: pd.DataFrame) -> FamilyAvg:
 
     """
     based on Family number from input file -> compute average values of the relvant time-series
@@ -78,6 +78,7 @@ def calc_family_avg(all_stats: pd.DataFrame, df_input: pd.DataFrame) -> pd.DataF
         family_name=[],
     )
 
+    validate_input_columns(df_input)
     family_uniq = pd.unique(df_input["Family"])
     console.print('list of unique families:', family_uniq)
 
@@ -85,8 +86,20 @@ def calc_family_avg(all_stats: pd.DataFrame, df_input: pd.DataFrame) -> pd.DataF
         console.print("Processing family:", family)
         ## Create a boolean mask from the family list
         mask = pd.Series(all_stats.family) == family
-        mask_input = df_input[df_input["Family"] == family]["Averaging_method"].values.unique()
-        mask_filename = df_input[df_input["Family"] == family]["Timeseries"].values.tolist()
+        methods = df_input.loc[df_input["Family"] == family, "Averaging_method"].unique()
+        if len(methods) != 1:
+            raise ValueError(
+                f"Family {family} must have exactly one averaging method. "
+                "Please fix the input file and run it again."
+            )
+        method = str(methods[0]).strip().lower()
+        if method not in {"mean", "max", "mean_max"}:
+            raise ValueError(
+                f"Unknown Averaging_method for family {family}: {method}. "
+                "Allowed values are: mean, max, mean_max. "
+                "Please fix the input file and run it again."
+            )
+        mask_filename = df_input[df_input["Family"] == family]["Timeseries"].tolist()
 
         ## from that bolean mask, filter the individual DataFrames inside the dataclass
         mask_mean = all_stats.mean[mask.values]
@@ -101,7 +114,7 @@ def calc_family_avg(all_stats: pd.DataFrame, df_input: pd.DataFrame) -> pd.DataF
 
 
         ## based on averaging method from input file compute average values
-        if mask_input == "mean":
+        if method == "mean":
             fam_mean = mask_mean.mean(axis=0).to_frame().T # average values of each column
             fam_std = mask_std.mean(axis=0).to_frame().T
             fam_min = mask_min.mean(axis=0).to_frame().T
@@ -113,7 +126,7 @@ def calc_family_avg(all_stats: pd.DataFrame, df_input: pd.DataFrame) -> pd.DataF
             fam_max_plf = mask_max_plf.mean(axis=0).to_frame().T
 
             
-        elif mask_input == "max":
+        elif method == "max":
             fam_mean = mask_mean.max(axis=0).to_frame().T # max values of each column
             fam_std = mask_std.max(axis=0).to_frame().T
             fam_min = mask_min.max(axis=0).to_frame().T
@@ -125,7 +138,7 @@ def calc_family_avg(all_stats: pd.DataFrame, df_input: pd.DataFrame) -> pd.DataF
             fam_max_plf = mask_max_plf.max(axis=0).to_frame().T
 
             
-        elif mask_input == "mean_max":
+        elif method == "mean_max":
             sorted_mean = mask_mean.apply(lambda x: x.sort_values(ascending=False).values)
             sorted_std = mask_std.apply(lambda x: x.sort_values(ascending=False).values)
             sorted_min = mask_min.apply(lambda x: x.sort_values(ascending=False).values)
@@ -190,8 +203,8 @@ def calc_family_avg(all_stats: pd.DataFrame, df_input: pd.DataFrame) -> pd.DataF
             ignore_index=True,
         )
 
-        family_stats.family_name = family # save family number
-        family_stats.filename = mask_filename[0] # keep the first filename of the family
+        family_stats.family_name.append(family) # save family number
+        family_stats.filename.append(mask_filename) # keep filenames of the family
 
 
 

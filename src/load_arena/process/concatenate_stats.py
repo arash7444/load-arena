@@ -4,6 +4,7 @@ from load_arena.data_reader import LoadArenaConfig
 from load_arena.data_reader import ReadHawc2
 from load_arena.data_reader import toDataFrame
 from load_arena.process.simple_stats import calc_stats
+from load_arena.case_loader.input_reader import validate_input_columns
 import os
 from rich.console import Console
 from rich.traceback import install
@@ -22,11 +23,11 @@ class All_stats:
     std_plf: pd.DataFrame
     min_plf: pd.DataFrame
     max_plf: pd.DataFrame
-    filename: str
-    family: str
+    filename: list[str]
+    family: list[str]
 
 
-def concatenate_stats(input_file_df: list | pd.DataFrame) -> pd.DataFrame:
+def concatenate_stats(input_file_df: list | pd.DataFrame) -> All_stats:
     """
     Concatenate a list of All_stats objects into a single DataFrame.
 
@@ -59,6 +60,7 @@ def concatenate_stats(input_file_df: list | pd.DataFrame) -> pd.DataFrame:
 
     # if list_files is a DataFrame, extract the file paths
     if isinstance(input_file_df, pd.DataFrame): 
+        validate_input_columns(input_file_df)
         list_files = input_file_df["Folder"] + input_file_df["Timeseries"]
         PLF_list = list(map(float, input_file_df["PLF"]))
     else:

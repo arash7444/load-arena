@@ -9,13 +9,13 @@ Input simulation results → data reader → processing → visualization/report
 
 
 ```mermaid
-flowchart TD
+flowchart LR
 
-    A[HAWC2 result files] --> B[HAWC2 reader]
-    B --> C[Standard SimulationData object]
+    A[HAWC2 result files] --> B[Simulation reader - ex: HAWC2 reader]
+    B --> C[Convert it a standard Dataframe for all simulation softwares]
     C --> D[Statistics]
-    C --> E[DEL calculation]
-    C --> F[Family averaging]
+    C --> E[Family averaging]
+    C --> F[DEL calculation]
     D --> G[Plots and reports]
     E --> G
     F --> G
@@ -24,7 +24,7 @@ flowchart TD
 
 ## First supported simulation software
 - HAWC2
-- 
+
 ## Later supported software
 
 - Bladed
@@ -34,8 +34,10 @@ flowchart TD
 ## First processing features
 
 - Simple statistics
-- Damage equivalent load
 - Family averaging
+- Extreme load calculation among all Load Cases
+- Damage equivalent load using Rainflow counting
+
 
 ## Later features
 
