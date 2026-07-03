@@ -31,6 +31,7 @@ class FamilyAvg:
     max_plf: pd.DataFrame
     filename: List[str]
     family_name: List[str]
+    case_folder: List[str]
     
 
 def calc_family_avg(all_stats: All_stats, df_input: pd.DataFrame) -> FamilyAvg:
@@ -76,6 +77,7 @@ def calc_family_avg(all_stats: All_stats, df_input: pd.DataFrame) -> FamilyAvg:
         max_plf=pd.DataFrame(),
         filename=[],
         family_name=[],
+        case_folder=[],
     )
 
     validate_input_columns(df_input)
@@ -100,6 +102,8 @@ def calc_family_avg(all_stats: All_stats, df_input: pd.DataFrame) -> FamilyAvg:
                 "Please fix the input file and run it again."
             )
         mask_filename = df_input[df_input["Family"] == family]["Timeseries"].tolist()
+        mask_case_folder = df_input[df_input["Family"] == family]["Case_folder"].tolist()
+
 
         ## from that bolean mask, filter the individual DataFrames inside the dataclass
         mask_mean = all_stats.mean[mask.values]
@@ -205,6 +209,7 @@ def calc_family_avg(all_stats: All_stats, df_input: pd.DataFrame) -> FamilyAvg:
 
         family_stats.family_name.append(family) # save family number
         family_stats.filename.append(mask_filename) # keep filenames of the family
+        family_stats.case_folder.append(mask_case_folder) # keep case folders of the family
 
 
 

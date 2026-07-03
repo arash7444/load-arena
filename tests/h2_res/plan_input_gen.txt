@@ -1,0 +1,5 @@
+Now I want to add another feature to the Load Arena. I want to generate input data csv file that The tool used it as input.
+
+this code should be stand alone code. It should be an excel file having the following content:
+DLC Folder: folder containing simulation files for related DLC
+ sorting_type: it should seperate

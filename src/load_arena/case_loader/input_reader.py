@@ -7,6 +7,7 @@ from difflib import get_close_matches
 
 REQUIRED_INPUT_COLUMNS = [
     "Folder",
+    "Case_folder",
     "Timeseries",
     "Family",
     "PLF",
@@ -33,6 +34,7 @@ def validate_input_columns(df: pd.DataFrame) -> None:
     -------
     >>> df_input = pd.DataFrame({
     ...     "Folder": ["tests/h2_res/dlc12/"],
+    ...     "Case_folder": ["dlc12"],
     ...     "Timeseries": ["case_001"],
     ...     "Family": [1],
     ...     "PLF": [1.0],
