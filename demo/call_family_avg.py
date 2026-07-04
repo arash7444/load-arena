@@ -39,6 +39,7 @@ console.print("Family average min: \n",family_stats.min)
 console.print("Family average max: \n",family_stats.max)
 console.print("Family average filename: \n",family_stats.filename)
 console.print("Family average family_name: \n",family_stats.family_name)
+console.print("Family average grouped by Family: \n", family_stats.mean.groupby("Family").mean())
 
 
 fig, ax = plt.subplots(figsize=(10, 6))
@@ -52,7 +53,7 @@ plt.plot(
 )
 
 plt.plot(
-    family_stats.mean.iloc[:, 1],
+    family_stats.mean.drop(columns=["Family"]).iloc[:, 1],
     family_stats.mean["Aerot._[kW]"],
     label="Family avg Aerot. [kW]",
     color="red",

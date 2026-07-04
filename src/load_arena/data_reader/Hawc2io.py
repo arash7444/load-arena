@@ -359,7 +359,63 @@ class ReadHawc2(object):
     ################################################################################
 
 
+def _make_unique_columns(columns):
+    """
+    Return unique column names by suffixing repeated labels.
+
+    Parameters
+    ----------
+    columns : list[str]
+        Column names that may contain duplicate labels.
+
+    Returns
+    -------
+    list[str]
+        Unique column names where the first occurrence is unchanged and later
+        duplicates receive ``__2``, ``__3``, and so on.
+
+    Examples
+    --------
+    >>> _make_unique_columns(["Load", "Load", "Moment", "Load"])
+    ['Load', 'Load__2', 'Moment', 'Load__3']
+    """
+    seen = {}
+    unique_columns = []
+
+    for column in columns:
+        count = seen.get(column, 0) + 1
+        seen[column] = count
+        if count == 1:
+            unique_columns.append(column)
+        else:
+            unique_columns.append(f"{column}__{count}")
+
+    return unique_columns
+
+
 def toDataFrame(data, info):
+    """
+    Convert HAWC2 result arrays and channel metadata to a DataFrame.
+
+    Parameters
+    ----------
+    data : array-like
+        Numeric result matrix with one column per channel.
+    info : list
+        Channel metadata containing names, units, and descriptions.
+
+    Returns
+    -------
+    pandas.DataFrame
+        DataFrame with simplified, unit-aware, unique channel column names.
+
+    Examples
+    --------
+    >>> data = [[1.0, 2.0]]
+    >>> info = [["Load", "Load"], ["kN", "kN"], ["", ""]]
+    >>> toDataFrame(data, info).columns.tolist()
+    ['Load_[kN]', 'Load_[kN]__2']
+    """
     import re
 
     # Simplify output names
@@ -410,6 +466,8 @@ def toDataFrame(data, info):
         cols = [n + "_[" + u + "]" for n, u in zip(names, units)]
     else:
         cols = names
+
+    cols = _make_unique_columns(cols)
 
     return pd.DataFrame(data=data, columns=cols)
 

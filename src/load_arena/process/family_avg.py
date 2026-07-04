@@ -37,20 +37,20 @@ class FamilyAvg:
 def calc_family_avg(all_stats: All_stats, df_input: pd.DataFrame) -> FamilyAvg:
 
     """
-    based on Family number from input file -> compute average values of the relvant time-series
+    Compute family-level statistics from concatenated time-series statistics.
 
     Parameters
     ----------
-    df_stats : pd.DataFrame
-        Dataframe containing all stats from concatenating individual statistics
-
+    all_stats : All_stats
+        Concatenated statistics from all input time-series.
     df_input : pd.DataFrame
-        Dataframe containing input information from input file (CSV file)
+        Input configuration with family, PLF, case folder, and averaging method columns.
 
     Returns
     -------
-    family_avg : pd.DataFrame
-        Dataframe containing average values of the relvant time-series
+    FamilyAvg
+        Family-level statistics where each statistic dataframe includes a ``Family``
+        column and the original family metadata remains available as lists.
 
     Examples
     --------
@@ -166,6 +166,17 @@ def calc_family_avg(all_stats: All_stats, df_input: pd.DataFrame) -> FamilyAvg:
             fam_max_plf = sorted_max_plf.iloc[:half_len,:].mean().to_frame().T
 
             
+        for fam_df in (
+            fam_mean,
+            fam_std,
+            fam_min,
+            fam_max,
+            fam_mean_plf,
+            fam_std_plf,
+            fam_min_plf,
+            fam_max_plf,
+        ):
+            fam_df.insert(0, "Family", family)
 
         family_stats.mean = pd.concat(
             [family_stats.mean, fam_mean],
