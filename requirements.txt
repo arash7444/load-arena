@@ -8,4 +8,6 @@ xarray
 pytest 
 rich
 openpyxl
+pytest
+numba
  

@@ -19,7 +19,8 @@ dependencies = [
     "scipy",
     "xarray",
 	"openpyxl",
-]
+	"numba",
+	]
 
 [project.optional-dependencies]
 dev = [
