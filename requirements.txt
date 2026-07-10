@@ -10,4 +10,4 @@ rich
 openpyxl
 pytest
 numba
- 
+
