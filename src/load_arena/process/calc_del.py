@@ -44,8 +44,8 @@ def calc_del(
     
     '''
 
-    ranges = cycles["range"].to_numpy(dtype=float)
-    counts = cycles["count"].to_numpy(dtype=float)
+    ranges = cycles.range
+    counts = cycles.count
 
     damage_sum = np.sum(counts * ranges**wohler_exponent)
 
@@ -61,16 +61,23 @@ if __name__ == "__main__":
     file_flex = r".\tests\h2_res\dlc13\dlc13_wsp04_wdir000_s023004"
 
     data = read_hawc2_flex(file_flex)
-    signal = data["blade1N1Mycoo:_[kNm]"]
+    signal = data["blade1N1Mxcoo:_[kNm]"]
 
-    rf_result = calculate_rainflow(signal, method="windap")
+    rf_result_windap = calculate_rainflow(signal, method="windap")
+    rf_result_astm = calculate_rainflow(signal, method="astm")
 
-    del_1hz = calc_del(
-        cycles=rf_result,
+    del_1hz_windap = calc_del(
+        cycles=rf_result_windap,
+        wohler_exponent=10,
+        n_ref=data["Time_[s]"].iloc[-1] - data["Time_[s]"].iloc[0],
+    )    
+    del_1hz_astm = calc_del(
+        cycles=rf_result_astm,
         wohler_exponent=10,
         n_ref=data["Time_[s]"].iloc[-1] - data["Time_[s]"].iloc[0],
     )    
         
 
-    console.print(f"DEL: {del_1hz}")
-    console.print(f"std: {data['blade1N1Mycoo:_[kNm]'].std()}")
+    console.print(f"DEL windap: {del_1hz_windap}")
+    console.print(f"DEL astm: {del_1hz_astm}")
+    console.print(f"std: {data['blade1N1Mxcoo:_[kNm]'].std()}")

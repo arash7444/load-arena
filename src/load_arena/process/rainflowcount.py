@@ -119,3 +119,16 @@ def rainflow_astm(signal, rainflowcount_astm=rainflowcount_astm):
     ampl_mean = np.array(rainflowcount_astm.rainflowcount(sig_ext))
 
     return np.array(ampl_mean).T
+
+
+if __name__ == "__main__":
+    signal = np.array([-2.0, 0.0, 1.0, 0.0, -3.0, 0.0, 5.0, 0.0, -1.0, 0.0, 3.0, 0.0, -4.0, 0.0, 4.0, 0.0, -2.0])
+    ampl, mean = rainflow_windap(signal)
+    print("windap")
+    print("ampl: ", ampl)
+    print("mean: ", mean)
+    print("----------------------")
+    print("astm")
+    ampl_atsm, mean_atsm = rainflow_astm(signal)
+    print("ampl: ", ampl_atsm)
+    print("mean: ", mean_atsm)

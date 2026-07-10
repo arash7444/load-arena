@@ -75,13 +75,19 @@ def calculate_rainflow(
         threshold = None
     else:
         raise ValueError(f"Unknown rainflow method: {method}")
+    
 
-    RainflowResult = pd.DataFrame(
-        {
-            "range": ranges,
-            "mean": means,
-            "count": np.full(len(ranges), 0.5),
-        }
-    )
+    RainflowResult.range = ranges
+    RainflowResult.mean = means
+    RainflowResult.count = np.full(len(ranges), 0.5)
+
+
+    # RainflowResult = pd.DataFrame(
+    #     {
+    #         "range": ranges,
+    #         "mean": means,
+    #         "count": np.full(len(ranges), 0.5),
+    #     }
+    # )
 
     return RainflowResult
