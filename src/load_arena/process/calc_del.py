@@ -17,17 +17,17 @@ install()
 console = Console()
 
 def calc_del(
-    cycles: pd.DataFrame,
+    signal: pd.Series,
     wohler_exponent: float,
-    n_ref: float,
+    n_ref: float,    
 ) -> float:
     '''
     Calculates the fatigue damage equivalent load from rainflow cycles.
 
     Parameters
     ----------
-    cycles : pd.DataFrame
-        DataFrame containing the rainflow results including range, mean and cycle number (half-cycles).
+    cycles : RainflowResult
+        Object containing the rainflow results including range, mean and cycle number (half-cycles).
     wohler_exponent : float
         The Wohler exponent.
     n_ref : float
@@ -43,6 +43,8 @@ def calc_del(
     >>> del = calc_del(cycles, wohler_exponent, n_ref)
     
     '''
+    cycles = calculate_rainflow(signal, method="windap")
+
 
     ranges = cycles.range
     counts = cycles.count
@@ -63,16 +65,16 @@ if __name__ == "__main__":
     data = read_hawc2_flex(file_flex)
     signal = data["blade1N1Mxcoo:_[kNm]"]
 
-    rf_result_windap = calculate_rainflow(signal, method="windap")
-    rf_result_astm = calculate_rainflow(signal, method="astm")
+    # rf_result_windap = calculate_rainflow(signal, method="windap")
+    # rf_result_astm = calculate_rainflow(signal, method="astm")
 
     del_1hz_windap = calc_del(
-        cycles=rf_result_windap,
+        signal,
         wohler_exponent=10,
         n_ref=data["Time_[s]"].iloc[-1] - data["Time_[s]"].iloc[0],
     )    
     del_1hz_astm = calc_del(
-        cycles=rf_result_astm,
+        signal,
         wohler_exponent=10,
         n_ref=data["Time_[s]"].iloc[-1] - data["Time_[s]"].iloc[0],
     )    

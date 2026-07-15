@@ -1,1 +1,1 @@
-from load_arena.case_loader.input_reader import read_input_file, validate_input_columns
+from load_arena.case_loader.input_reader import read_uls_input_file, validate_input_columns, read_fls_input_file

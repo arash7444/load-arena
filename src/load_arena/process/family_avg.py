@@ -8,7 +8,7 @@ from typing import List, Dict
 console = Console()
 
 from load_arena.process.concatenate_stats import All_stats, concatenate_stats
-from load_arena.case_loader import read_input_file
+from load_arena.case_loader import read_uls_input_file
 from load_arena.case_loader.input_reader import validate_input_columns
 
 from load_arena.data_reader import LoadArenaConfig

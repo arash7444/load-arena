@@ -4,5 +4,7 @@ from load_arena.process.family_avg import FamilyAvg, calc_family_avg
 from load_arena.process.uls import ULSStats, calc_uls
 from load_arena.process.rainflowcount import rainflow_astm, rainflow_windap
 from load_arena.process.calculate_rainflow import calculate_rainflow, RainflowResult
+from load_arena.process.calc_del import calc_del
+
 
 
