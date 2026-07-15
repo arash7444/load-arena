@@ -1,7 +1,11 @@
 import pandas as pd
 import pytest
 
-from load_arena.case_loader.input_reader import validate_input_columns
+from load_arena.case_loader.input_reader import (
+    read_fls_input_file,
+    read_input_file,
+    validate_input_columns,
+)
 from load_arena.process.concatenate_stats import All_stats
 from load_arena.process.family_avg import calc_family_avg
 
@@ -19,6 +23,110 @@ def test_validate_input_columns_suggests_correct_name():
 
     with pytest.raises(ValueError, match="'folder' should be 'Folder'"):
         validate_input_columns(df_input)
+
+
+def test_validate_input_columns_rejects_missing_schema_discriminator():
+    """Verify schema inference rejects input with no ULS or FLS discriminator.
+
+    Parameters
+    ----------
+    None
+        This test creates its input table internally.
+
+    Returns
+    -------
+    None
+        The test passes when schema inference raises a clear ``ValueError``.
+
+    Examples
+    --------
+    >>> test_validate_input_columns_rejects_missing_schema_discriminator()
+    """
+    df_input = pd.DataFrame(
+        {
+            "Folder": ["tests/h2_res/dlc12/"],
+            "Case_folder": ["dlc12"],
+            "Timeseries": ["case_001"],
+        }
+    )
+
+    with pytest.raises(ValueError, match="Cannot determine input type"):
+        validate_input_columns(df_input)
+
+
+def test_validate_input_columns_rejects_ambiguous_schema():
+    """Verify schema inference rejects tables containing both discriminators.
+
+    Parameters
+    ----------
+    None
+        This test creates its input table internally.
+
+    Returns
+    -------
+    None
+        The test passes when ambiguous inference raises ``ValueError``.
+
+    Examples
+    --------
+    >>> test_validate_input_columns_rejects_ambiguous_schema()
+    """
+    df_input = pd.DataFrame(
+        {
+            "Family": [1],
+            "Occurrences": [10],
+        }
+    )
+
+    with pytest.raises(ValueError, match="Cannot determine input type"):
+        validate_input_columns(df_input)
+
+
+def test_read_fls_input_file_uses_explicit_schema():
+    """Verify the FLS reader validates and returns the checked-in FLS input.
+
+    Parameters
+    ----------
+    None
+        This test reads the checked-in CSV fixture.
+
+    Returns
+    -------
+    None
+        The test passes when the FLS schema is accepted.
+
+    Examples
+    --------
+    >>> test_read_fls_input_file_uses_explicit_schema()
+    """
+    df_input = read_fls_input_file("tests/input_file/FLS_input_file.csv")
+
+    assert "Occurrences" in df_input.columns
+    assert "Family" not in df_input.columns
+
+
+def test_read_input_file_warns_and_preserves_uls_compatibility():
+    """Verify the deprecated input reader still returns validated ULS data.
+
+    Parameters
+    ----------
+    None
+        This test reads the checked-in CSV fixture.
+
+    Returns
+    -------
+    None
+        The test passes when the alias warns and returns the ULS table.
+
+    Examples
+    --------
+    >>> test_read_input_file_warns_and_preserves_uls_compatibility()
+    """
+    with pytest.warns(DeprecationWarning, match="read_uls_input_file"):
+        df_input = read_input_file("tests/input_file/ULS_input_file.csv")
+
+    assert "Family" in df_input.columns
+    assert "Occurrences" not in df_input.columns
 
 
 def test_calc_family_avg_requires_one_method_per_family():

@@ -19,13 +19,13 @@ from load_arena.data_reader import toDataFrame
 from load_arena.process.simple_stats import calc_stats
 from load_arena.utils import find_files
 from load_arena.process.concatenate_stats import All_stats, concatenate_stats
-from load_arena.case_loader import read_input_file
+from load_arena.case_loader import read_uls_input_file
 from load_arena.process.family_avg import FamilyAvg, calc_family_avg
 
 
 
-file_name = r".\tests\input_file\input_file.csv"
-df_input = read_input_file(file_name)
+file_name = r".\tests\input_file\ULS_input_file.csv"
+df_input = read_uls_input_file(file_name)
 list_files = df_input["Folder"] + df_input["Timeseries"]
 
 all_stats_hawc2 = concatenate_stats(input_file_df=df_input)

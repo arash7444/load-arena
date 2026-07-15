@@ -51,10 +51,11 @@ for i in range(len(list_files)):
 
     # del_1hz_ch = [calc_del(data[ch],wohler_exponent=10, n_ref=600) for ch in data.columns]
     del_1hz = []
-    for channel in data.columns:
-        print(channel)
-        data_ch = data[channel]  
-        del_1hz.append(calc_del(data_ch,wohler_exponent=10, n_ref=600))
+    channel ="DLLinp_[-]__4"
+    # for channel in data.columns:
+    print(channel)
+    data_ch = data[channel]  
+    del_1hz.append(calc_del(data_ch,wohler_exponent=10, n_ref=600))
 
 console.print(del_1hz)
 print("---------")

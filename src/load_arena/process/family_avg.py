@@ -54,8 +54,8 @@ def calc_family_avg(all_stats: All_stats, df_input: pd.DataFrame) -> FamilyAvg:
 
     Examples
     --------
-    >>> file_name = r".\tests\input_file\input_file.csv"
-    >>> df_input = read_input_file(file_name)
+    >>> file_name = "tests/input_file/ULS_input_file.csv"
+    >>> df_input = read_uls_input_file(file_name)
     >>> all_stats_hawc2 = concatenate_stats(input_file_df=df_input)
     >>> family_stats = calc_family_avg(all_stats_hawc2, df_input)
     >>> console.print("mean: \n",family_stats.mean)

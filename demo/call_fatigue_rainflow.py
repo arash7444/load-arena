@@ -18,7 +18,12 @@ data = read_hawc2_flex(file_flex)
 RainflowResult = calculate_rainflow(data["blade1N1Mxcoo:_[kNm]"], method="windap")
 console.print("Rainflow counts (range, mean, count): ",RainflowResult.range, RainflowResult.mean, RainflowResult.count)
 
-DEL_1hz = calc_del(cycles= RainflowResult, wohler_exponent = 10, n_ref = 600) 
+DEL_1hz = calc_del(
+    data["blade1N1Mxcoo:_[kNm]"],
+    wohler_exponent=10,
+    n_ref=600,
+    method="windap",
+)
 
 console.print("1 Hz DEL: ", DEL_1hz)
 

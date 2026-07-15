@@ -1,94 +1,60 @@
-from PIL import GimpGradientFile
-from logging import config
-import pathlib as path
+from pathlib import Path
+
 import pandas as pd
-from load_arena.data_reader import LoadArenaConfig
-from load_arena.data_reader import ReadHawc2
-from load_arena.data_reader.Hawc2io import toDataFrame
+
+from load_arena.data_reader.Hawc2io import ReadHawc2, toDataFrame
+from load_arena.data_reader.load_arena_config import LoadArenaConfig
 
 
-
-
-def read_hawc2_flex(filen_name=None) -> pd.DataFrame:
-    """
-    Read a single HAWc2 result file.
+def read_hawc2_flex(file_name: str | Path | None = None) -> pd.DataFrame:
+    """Read one FLEX-format HAWC2 result file into a DataFrame.
 
     Parameters
     ----------
-    filen_name : str, optional
-        The path to the result file.
-        If None, the default path will be used.
+    file_name : str or pathlib.Path
+        Path or path prefix of the FLEX result file.
 
     Returns
     -------
+    pandas.DataFrame
+        Simulation samples with channel names derived from HAWC2 metadata.
 
-    df : pd.DataFrame
-        A DataFrame containing the simulation results.
-
-    
     Examples
     --------
-    >>> test_read_hawc2_flex()
+    >>> data = read_hawc2_flex("tests/h2_res/dlc13/example")
+    >>> isinstance(data, pd.DataFrame)
+    True
     """
-    if filen_name is None:
-        # file = path.Path(
-        #     r".\tests\h2_res\dlc13\dlc13_wsp04_wdir000_s023004"
-        # )
+    if file_name is None:
         raise FileNotFoundError("No file name provided")
-    else:
-        file = filen_name
 
-
-    config = LoadArenaConfig(sims_path=file)
-    res_file = ReadHawc2(config.sims_path)
-    data = res_file.ReadAll()
-
-    info = res_file.ChInfo
-    df_1 = toDataFrame(data, info)
-
-    azimuth = df_1["Azi1_[deg]"].max().round(0)
-    assert azimuth == 180, f"Azimuth is {azimuth} and should be 180"
-    return df_1
+    config = LoadArenaConfig(sims_path=Path(file_name))
+    result_file = ReadHawc2(config.sims_path)
+    return toDataFrame(result_file.ReadAll(), result_file.ChInfo)
 
 
 def read_hawc2_sel(file_name: str | Path | None = None) -> pd.DataFrame:
+    """Read one SEL/DAT-format HAWC2 result file into a DataFrame.
 
+    Parameters
+    ----------
+    file_name : str or pathlib.Path
+        Path or path prefix of the SEL/DAT result file.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Simulation samples with channel names derived from HAWC2 metadata.
+
+    Examples
+    --------
+    >>> data = read_hawc2_sel("tests/h2_res/sel_res/example")
+    >>> isinstance(data, pd.DataFrame)
+    True
+    """
     if file_name is None:
-        # file = path.Path(r".\tests\h2_res\sel_res\nrel_5mw_reference_wind_turbine")
         raise FileNotFoundError("No file name provided")
-    else:
-        file = file_name
-        
-    config = LoadArenaConfig(
-    sims_path=path.Path(
-        r".\tests\h2_res\sel_res\nrel_5mw_reference_wind_turbine"
-    )
-)
 
-    res_file_2 = ReadHawc2(config.sims_path)
-
-    results = res_file_2.ReadAll()
-    channelinfo = res_file_2.ChInfo
-    df_2 = toDataFrame(results, channelinfo)
-
-    # df = pd.DataFrame(results, columns=channelinfo[0])
-    azimuth = df_2["bea1angle_[deg]"].max().round(0)
-    assert azimuth == 360, f"Azimuth is {azimuth} and should be 360"
-    return df_2
-
-
-
-if __name__ == "__main__":
-    file_flex = path.Path(
-    r".\tests\h2_res\dlc13\dlc13_wsp04_wdir000_s023004"
-)
-
-    df_flex = read_hawc2_flex(file_flex)
-    print(df_flex.head())   
-
-    file_sel = path.Path(
-    r".\tests\h2_res\sel_res\nrel_5mw_reference_wind_turbine"
-)
-    df_sel = read_hawc2_sel(file_sel)
-    print(df_sel.head())
-
+    config = LoadArenaConfig(sims_path=Path(file_name))
+    result_file = ReadHawc2(config.sims_path)
+    return toDataFrame(result_file.ReadAll(), result_file.ChInfo)

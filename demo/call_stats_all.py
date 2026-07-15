@@ -24,7 +24,7 @@ from load_arena.case_loader import read_uls_input_file
 # # # use a simple way: just provide the folder name and extension or read from input file
 # list_files = find_files(folder_name=r".\tests\h2_res\dlc13", file_extension=".int")
 
-file_name = r".\tests\input_file\input_file.csv"
+file_name = r".\tests\input_file\ULS_input_file.csv"
 df_input = read_uls_input_file(file_name)
 # list_files = df_input["Folder"] + df_input["Timeseries"]
 

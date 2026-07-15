@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 from rich.console import Console
 from rich.traceback import install
 
-from load_arena.case_loader import read_input_file
+from load_arena.case_loader import read_uls_input_file
 from load_arena.process.concatenate_stats import concatenate_stats
 from load_arena.process.family_avg import calc_family_avg
 from load_arena.process.uls import calc_uls
@@ -88,8 +88,8 @@ def plot_family_uls(family_uls, channel):
     return fig, ax
 
 
-file_name = r".\tests\input_file\input_file.csv"
-df_input = read_input_file(file_name)
+file_name = r".\tests\input_file\ULS_input_file.csv"
+df_input = read_uls_input_file(file_name)
 
 all_stats_hawc2 = concatenate_stats(input_file_df=df_input)
 family_stats = calc_family_avg(all_stats_hawc2, df_input)
