@@ -6,6 +6,7 @@ from load_arena.case_loader import read_uls_input_file
 from load_arena.process.concatenate_stats import concatenate_stats
 from load_arena.process.family_avg import calc_family_avg
 from load_arena.process.uls import calc_uls
+import pathlib
 
 install()
 console = Console()
@@ -74,14 +75,15 @@ def plot_family_uls(family_uls, channel):
     ax.set_title(f"Family ULS - {channel}")
 
     for index, row in family_uls.iterrows():
-        ax.annotate(
-            row[f"{channel}_filename"],
-            xy=(index, row[channel]),
-            xytext=(0, 5 if row[channel] >= 0 else -15),
+        ax.annotate(            
+            pathlib.Path(row[f"{channel}_filename"]).stem,
+            xy=(index, row[channel]/2),
+            #xytext=(0, 5 if row[channel] >= 0 else -15),
+            xytext=(0, 0),
             textcoords="offset points",
             ha="center",
             fontsize=8,
-            rotation=20,
+            rotation=90,
         )
 
     fig.tight_layout()
