@@ -469,7 +469,16 @@ def toDataFrame(data, info):
 
     cols = _make_unique_columns(cols)
 
-    return pd.DataFrame(data=data, columns=cols)
+    df = pd.DataFrame(
+        data=data,
+        columns=cols,
+    )
+
+    df.attrs["units"] = units
+    df.attrs["channel_names"] = cols
+    df.attrs["descriptions"] = descriptions
+
+    return df
 
 
 ################################################################################

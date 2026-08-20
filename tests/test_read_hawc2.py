@@ -1,4 +1,5 @@
 import pandas as pd
+from load_arena.data_reader import to_scipp_dataset
 
 from load_arena.data_reader import read_hawc2_flex, read_hawc2_sel
 from load_arena.data_reader.Hawc2io import toDataFrame
@@ -28,6 +29,8 @@ def test_read_hawc2_flex():
 
     azimuth = df_1["Azi1_[deg]"].max().round(0)
     assert azimuth == 180, f"Azimuth is {azimuth} and should be 180"
+    ds = to_scipp_dataset(df_1) # convert df to scipp dataset
+    print(ds)
 
 
 def test_read_hawc2_sel():
