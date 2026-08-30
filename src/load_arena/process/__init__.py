@@ -5,6 +5,7 @@ from load_arena.process.uls import ULSStats, calc_uls
 from load_arena.process.rainflowcount import rainflow_astm, rainflow_windap
 from load_arena.process.calculate_rainflow import calculate_rainflow, RainflowResult
 from load_arena.process.calc_del import calc_del
+from load_arena.process.fatigue_results import make_rainflow_range_spectrum, RainflowRangeSpectrum
 
 
 

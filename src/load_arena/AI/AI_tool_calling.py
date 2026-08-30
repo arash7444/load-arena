@@ -52,6 +52,11 @@ def get_available_channels() -> list[str]:
 
 if __name__ == "__main__":
 
+
+    from rich.console import Console
+    console = Console()
+    from rich.markdown import Markdown
+
     from load_arena.data_reader import read_hawc2_flex
     from pathlib import Path
 
@@ -82,11 +87,10 @@ if __name__ == "__main__":
         contents=prompt,
         config=types.GenerateContentConfig(
             tools=[
-                get_ai_info,
+                get_channel_info,
                 get_available_channels,
             ]
         ),
     )
 
-    print(response.text)
-
+    console.print(Markdown(response.text))
