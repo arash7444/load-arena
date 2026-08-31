@@ -1,3 +1,4 @@
+from PIL import ImageCms
 from pydantic import BaseModel
 import pandas as pd
 from rich.console import Console
@@ -5,7 +6,17 @@ console = Console()
 
 from google import genai
 from google.genai import types
+import os
+if not os.getenv("GEMINI_API_KEY"):
+    raise RuntimeError(
+        "GEMINI_API_KEY is not configured. "
+        'Create a Gemini API key, then run: setx GEMINI_API_KEY "YOUR_API_KEY". '
+        "Restart your terminal or IDE afterward."
+    )
+
 client = genai.Client()
+
+
 
 
 from load_arena.data_reader import read_hawc2_flex

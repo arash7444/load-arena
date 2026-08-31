@@ -76,6 +76,14 @@ if __name__ == "__main__":
     from google import genai
     from google.genai import types
 
+    import os
+    if not os.getenv("GEMINI_API_KEY"):
+        raise RuntimeError(
+            "GEMINI_API_KEY is not configured. "
+            'Create a Gemini API key, then run: setx GEMINI_API_KEY "YOUR_API_KEY". '
+            "Restart your terminal or IDE afterward."
+        )
+
     client = genai.Client()
 
     # prompt = "What is the maximum value of WSPgl._[m/s]?"
