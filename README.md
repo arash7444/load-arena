@@ -1,4 +1,11 @@
 # load-arena
+
+![Python](https://img.shields.io/badge/python-3.10+-blue)
+![Tests](https://img.shields.io/badge/tests-pytest-green)
+![Status](https://img.shields.io/badge/status-active--development-orange)
+![CI](https://github.com/arash7444/load-arena/actions/workflows/CI-pipeline.yml/badge.svg)
+![License](https://img.shields.io/badge/license-MIT-lightgrey)
+
 A Python toolkit for comparing and post-processing IEC 61400 wind turbine aeroelastic simulation results.
 
 
