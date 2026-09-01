@@ -9,7 +9,9 @@ from load_arena.process.rainflowcount import rainflow_astm, rainflow_windap
 
 @dataclass
 class RainflowResult:
-    """Store rainflow cycles and the parameters used to calculate them."""
+    """
+    Store rainflow cycles and the parameters used to calculate them.
+    """
 
     cycles: pd.DataFrame
     method: str
@@ -18,67 +20,37 @@ class RainflowResult:
 
     @property
     def range(self) -> pd.Series:
-        """Return the range of each counted half-cycle.
-
-        Parameters
-        ----------
-        None
-            This property does not accept parameters.
+        """
+        Return the range of each counted half-cycle.
 
         Returns
         -------
         pandas.Series
             Cycle ranges from the result table.
-
-        Examples
-        --------
-        >>> result = calculate_rainflow(np.array([0.0, 1.0, 0.0]), method="astm")
-        >>> result.range.equals(result.cycles["range"])
-        True
         """
         return self.cycles["range"]
 
     @property
     def mean(self) -> pd.Series:
-        """Return the mean load of each counted half-cycle.
-
-        Parameters
-        ----------
-        None
-            This property does not accept parameters.
+        """
+        Return the mean load of each counted half-cycle.
 
         Returns
         -------
         pandas.Series
             Cycle means from the result table.
-
-        Examples
-        --------
-        >>> result = calculate_rainflow(np.array([0.0, 1.0, 0.0]), method="astm")
-        >>> result.mean.equals(result.cycles["mean"])
-        True
         """
         return self.cycles["mean"]
 
     @property
     def count(self) -> pd.Series:
-        """Return the count assigned to each rainflow half-cycle.
-
-        Parameters
-        ----------
-        None
-            This property does not accept parameters.
+        """
+        Return the count assigned to each rainflow half-cycle.
 
         Returns
         -------
         pandas.Series
             Half-cycle counts from the result table.
-
-        Examples
-        --------
-        >>> result = calculate_rainflow(np.array([0.0, 1.0, 0.0]), method="astm")
-        >>> result.count.equals(result.cycles["count"])
-        True
         """
         return self.cycles["count"]
 
@@ -105,7 +77,7 @@ def calculate_rainflow(
     Returns
     -------
     RainflowResult
-        Independent result containing cycle ranges, means, counts, and metadata.
+        Independent result containing cycle ranges, means, counts
 
     Examples
     --------

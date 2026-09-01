@@ -2,40 +2,106 @@
 
 ![Python](https://img.shields.io/badge/python-3.10+-blue)
 ![Tests](https://img.shields.io/badge/tests-pytest-green)
-![Status](https://img.shields.io/badge/status-active--development-orange)
 ![CI](https://github.com/arash7444/load-arena/actions/workflows/CI-pipeline.yml/badge.svg)
+![Status](https://img.shields.io/badge/status-active--development-orange)
 ![License](https://img.shields.io/badge/license-MIT-lightgrey)
 
-A Python toolkit for comparing and post-processing IEC 61400 wind turbine aeroelastic simulation results.
+**Load Arena** is a Python toolkit for post-processing and comparing wind turbine aeroelastic simulation results.
 
+The project is mainly developed around **HAWC2** simulation results and common wind turbine load-analysis workflows.
+
+The goal is to build reusable tools for reading simulation results, calculating load statistics, fatigue and ultimate loads, and comparing groups of simulations.
+
+
+## Main Features
+
+Load Arena currently includes:
+
+- Reading HAWC2 result files and channel information
+- Conversion of simulation data to Pandas, Xarray and Scipp data structures
+- Basic statistics such as mean, standard deviation, minimum and maximum
+- Grouping and averaging simulation results by load-case family
+- Ultimate Limit State (ULS) load processing
+- Rainflow cycle counting
+- Damage Equivalent Load (DEL) calculation
+- Fatigue-load processing
+- Visualization of fatigue and rainflow results
+- Experimental LLM integration using structured outputs and tool calling
+
+## Project Structure
+
+```text
+load-arena/
+│
+├── src/load_arena/
+│   ├── data_reader/      # HAWC2 data reading and data conversion
+│   ├── case_loader/      # Load-case configuration and input handling
+│   ├── process/          # Statistics, ULS, rainflow and DEL calculations
+│   ├── visualization/    # Result visualization
+│   ├── AI/               # Experimental LLM/tool-calling integration
+│   └── utils/            # Utility functions
+│
+├── demo/                 # Example scripts
+├── tests/                # Pytest test suite
+├── docs/                 # Design notes and feature specifications
+└── pyproject.toml
+```
 
 ## Installation
 
+The project uses `uv` for dependency and environment management.
+
 ```bash
-# install requirements
-pip install -r requirements.txt
+git clone https://github.com/arash7444/load-arena.git
+cd load-arena
+
+uv sync
 ```
 
-## Input File Format
+Run the tests with:
 
-nput File Format
-The package utilizes a CSV configuration input (such as input_file.csv) to coordinate post-processing. The CSV requires the following columns:
+```bash
+uv run pytest
+```
 
-* **Folder**:  Directory path where the timeseries is located.
-* **Timeseries**: Filename prefix (excluding extension) of the HAWC2 results.
-* **Family**: Numeric or string identifier grouping similar simulations together.æ
-* **PLF**: Partial Load Factor to apply (multiplied with the calculated statistics).
-* **Averaging_method**: Method used to average the family. Supported methods:
-    - mean: Average value across all files in the family.
-    - max: Maximum value across all files in the family.
-mean_max: Sorts the values descending and computes the mean of the top 50% (worst-case half).
+## Example Workflows
+
+The `demo` directory contains example scripts for workflows such as:
+
+- statistics calculation
+- family averaging
+- ULS calculation
+- rainflow counting
+- DEL calculation
+
+For example:
+
+```bash
+uv run python demo/call_fatigue_rainflow.py
+```
 
 
-## Features
+## Development
 
-* **Simple_stats**: Calculate standard statistics (mean, standard deviation, minimum, maximum)
-* **Family_avg**: Calculate average values of the relvant time-series for each family
+Load Arena is an ongoing personal engineering software project.
+
+I use it both to develop reusable wind turbine load-analysis tools and to improve software-development practices around scientific Python, including:
+
+- modular package structure
+- Git-based development
+- automated testing with pytest
+- CI with GitHub Actions
+- dependency management with `uv`
+- feature specifications and design notes
+- structured scientific data with Xarray and Scipp
+
+The project is under active development and additional post-processing, visualization and data-pipeline features are planned.
 
 
 ## Note:
 The code is not done, and it's under development. 
+
+
+## License
+
+MIT License
