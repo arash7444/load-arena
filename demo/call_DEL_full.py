@@ -1,3 +1,4 @@
+from rich.markdown import Markdown
 import matplotlib.pyplot as plt
 from rich.console import Console
 from rich.traceback import install
@@ -66,8 +67,10 @@ for i in range(len(list_files)):
     #     del_1hz.append(calc_del(data_ch,wohler_exponent=10, n_ref=600))
 
 # console.print(del_1hz)
-print("---------")
+console.print("---------")
+console.print(Markdown("# 1 Hz DEL for each channel:"))
 console.print(del_1hz_ch)
+console.print("---------")
 plt.show()
 
 # DEL_lifetime_array = np.zeros(len(channel_list))

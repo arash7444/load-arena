@@ -1,2 +1,3 @@
 from load_arena.visualization.fatigue_plots import plot_rainflow_range_spectrum
-
+from load_arena.visualization.fatigue_plots import plot_damage_ratio
+from load_arena.visualization.fatigue_plots import plot_rainflow_matrix

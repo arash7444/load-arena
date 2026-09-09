@@ -13,6 +13,8 @@ from load_arena.process.concatenate_stats import concatenate_stats
 from load_arena.process import calculate_rainflow, calc_del
 from load_arena.data_reader import read_hawc2_flex, read_hawc2_sel
 from dataclasses import dataclass
+from load_arena.process.calculate_rainflow import RainflowResult
+
 
 @dataclass
 class RainflowRangeSpectrum:
@@ -54,10 +56,10 @@ def make_rainflow_range_spectrum(
 
     Example
     -------
-    >>> file_flex = r".\tests\h2_res\dlc13\dlc13_wsp04_wdir000_s023004"
-    >>> data = read_hawc2_flex(file_flex)
-    >>> result = make_rainflow_range_spectrum(data["blade1N1Mxcoo:_[kNm]"])
-    >>> console.print(result)
+    file_flex = r".\tests\h2_res\dlc13\dlc13_wsp04_wdir000_s023004"
+    data = read_hawc2_flex(file_flex)
+    result = make_rainflow_range_spectrum(data["blade1N1Mxcoo:_[kNm]"])
+    console.print(result)
     """
 
     RainflowResult = calculate_rainflow(channel, method="windap")
@@ -88,12 +90,63 @@ def make_rainflow_range_spectrum(
         mean_val=mean_val,
     )   
 
+
+
+
+@dataclass
+class RainflowMatrix:
+    mean_center: np.ndarray
+    range_center: np.ndarray
+    count: np.ndarray
+
+
+def make_rainflow_matrix(
+    result: RainflowResult,
+    mean_bins: int = 20,
+    range_bins: int = 20,
+) -> RainflowMatrix:
+
+    means = result.mean.to_numpy(dtype=float)
+    ranges = result.range.to_numpy(dtype=float)
+    counts = result.count.to_numpy(dtype=float)
+
+
+    # 2D version of the histogram, I give mean and range then it groups the cycles in both directions.
+    matrix, mean_edges, range_edges = np.histogram2d(
+        means,
+        ranges,
+        bins=[mean_bins, range_bins],
+        weights=counts,
+    )
+
+    mean_center = (mean_edges[:-1] + mean_edges[1:]) / 2
+    range_center = (range_edges[:-1] + range_edges[1:]) / 2
+
+    return RainflowMatrix(
+        mean_center=mean_center,
+        range_center=range_center,
+        count=matrix,
+    )
+
 if __name__ == "__main__":
     
     file_flex = r".\tests\h2_res\dlc13\dlc13_wsp04_wdir000_s023004"
 
     data = read_hawc2_flex(file_flex)
 
-    result = make_rainflow_range_spectrum(data["blade1N1Mxcoo:_[kNm]"])
-    console.print(result)
+    # result = make_rainflow_range_spectrum(data["blade1N1Mxcoo:_[kNm]"])
+    # console.print(result)
 
+
+
+    result_2 = calculate_rainflow(data["blade1N1Mxcoo:_[kNm]"], method="windap")
+    rainflow_matrix = make_rainflow_matrix(
+    result_2,
+    mean_bins=20,
+    range_bins=20,
+    )
+
+    console.print(rainflow_matrix.mean_center)
+    console.print(rainflow_matrix.range_center)
+    print(rainflow_matrix.count.shape)
+    print(rainflow_matrix.count.sum())
