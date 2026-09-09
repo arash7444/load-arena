@@ -1,10 +1,11 @@
 import pandas as pd
 from dataclasses import dataclass
+from pathlib import Path
 from load_arena.data_reader import LoadArenaConfig
 from load_arena.data_reader import ReadHawc2
 from load_arena.data_reader import toDataFrame
 from load_arena.process.simple_stats import calc_stats
-from load_arena.case_loader.input_reader import validate_input_columns
+from load_arena.case_loader.input_reader import validate_input_columns, validate_case_rows
 import os
 from rich.console import Console
 from rich.traceback import install
@@ -29,17 +30,21 @@ class All_stats:
 
 def concatenate_stats(input_file_df: list | pd.DataFrame) -> All_stats:
     """
-    Concatenate a list of All_stats objects into a single DataFrame.
+    Calculate and concatenate statistics for simulation paths or ULS cases.
 
     Parameters:
     -----------
-        list_files: list
+        input_file_df: list or pandas.DataFrame
             A list of file paths corresponding to the statistics or  a Dataframe from input file
 
     Returns:
     --------
         all_stats: dataclass
             A dataclass object containing the concatenated statistics from all All_stats objects.
+
+    Examples
+    --------
+    >>> stats = concatenate_stats(["results/case.int"])
     """
 
     all_stats = All_stats(
@@ -60,8 +65,9 @@ def concatenate_stats(input_file_df: list | pd.DataFrame) -> All_stats:
 
     # if list_files is a DataFrame, extract the file paths
     if isinstance(input_file_df, pd.DataFrame): 
-        validate_input_columns(input_file_df)
-        list_files = input_file_df["Folder"] + input_file_df["Timeseries"]
+        validate_case_rows(input_file_df, mode="uls")
+        list_files = [Path(folder) / name for folder, name in
+                      zip(input_file_df["Folder"], input_file_df["Timeseries"])]
         PLF_list = list(map(float, input_file_df["PLF"]))
     else:
         list_files = input_file_df

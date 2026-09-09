@@ -1,0 +1,22 @@
+project:
+  name: Example HAWC2 Campaign
+
+data:
+  software: HAWC2
+  results_path: ../../tests/h2_res/dlc13
+
+analysis:
+  statistics:
+    enabled: true
+  uls:
+    enabled: true
+    cases: input/ULS_cases.csv
+  fls:
+    enabled: true
+    cases: input/FLS_cases.csv
+    wohler_exponents: [4, 6, 8, 10, 12]
+    n_ref: 10000000
+    method: windap
+
+output:
+  directory: results

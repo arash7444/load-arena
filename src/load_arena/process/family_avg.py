@@ -9,7 +9,7 @@ console = Console()
 
 from load_arena.process.concatenate_stats import All_stats, concatenate_stats
 from load_arena.case_loader import read_uls_input_file
-from load_arena.case_loader.input_reader import validate_input_columns
+from load_arena.case_loader.input_reader import validate_case_rows
 
 from load_arena.data_reader import LoadArenaConfig
 from load_arena.data_reader import ReadHawc2
@@ -80,7 +80,7 @@ def calc_family_avg(all_stats: All_stats, df_input: pd.DataFrame) -> FamilyAvg:
         case_folder=[],
     )
 
-    validate_input_columns(df_input)
+    validate_case_rows(df_input, mode="uls")
     family_uniq = pd.unique(df_input["Family"])
     console.print('list of unique families:', family_uniq)
 

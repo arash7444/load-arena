@@ -4,6 +4,7 @@ from typing import Literal
 import warnings
 
 import pandas as pd
+import numpy as np
 
 
 REQUIRED_ULS_INPUT_COLUMNS = [
@@ -183,3 +184,56 @@ def read_input_csv(file_name: str | Path) -> pd.DataFrame:
     if path.suffix.lower() != ".csv":
         raise ValueError("The input file is not a CSV file, check file_name again")
     return pd.read_csv(path, encoding="utf-8-sig")
+
+
+def validate_case_rows(df: pd.DataFrame, mode: Literal["uls", "fls"]) -> None:
+    """Validate case values before reading simulation data.
+
+    Parameters
+    ----------
+    df : pandas.DataFrame
+        Case table in CSV row order.
+    mode : {"uls", "fls"}
+        Analysis schema to validate explicitly.
+
+    Returns
+    -------
+    None
+        Raises ValueError with CSV row context for invalid values.
+
+    Examples
+    --------
+    >>> validate_case_rows(read_uls_input_file("ULS.csv"), "uls")
+    """
+    validate_input_columns(df, mode=mode)
+    if df.empty:
+        raise ValueError("Case table must contain at least one row.")
+    required = REQUIRED_ULS_INPUT_COLUMNS if mode == "uls" else REQUIRED_FLS_INPUT_COLUMNS
+    for position, (_, row) in enumerate(df.iterrows(), start=2):
+        for column in required:
+            if pd.isna(row[column]) or not str(row[column]).strip():
+                raise ValueError(f"CSV row {position}: {column} must not be empty.")
+        for column in ("Folder", "Case_folder", "Timeseries"):
+            if not isinstance(row[column], str):
+                raise ValueError(f"CSV row {position}: {column} must be text.")
+        column = "PLF" if mode == "uls" else "Occurrences"
+        try:
+            value = float(row[column])
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"CSV row {position}: {column} must be numeric.") from exc
+        if isinstance(row[column], (bool, np.bool_)) or not np.isfinite(value) or (
+            value <= 0 if mode == "uls" else value < 0
+        ):
+            qualifier = "positive" if mode == "uls" else "nonnegative"
+            raise ValueError(f"CSV row {position}: {column} must be finite and {qualifier}.")
+    if mode == "uls":
+        for family, group in df.groupby("Family", sort=False):
+            methods = group["Averaging_method"].unique()
+            if len(methods) != 1:
+                raise ValueError(f"Family {family} must have exactly one averaging method.")
+            method = str(methods[0]).strip().lower()
+            if method not in {"mean", "max", "mean_max"}:
+                raise ValueError(f"Unknown Averaging_method for family {family}: {method}. "
+                                 "Allowed values are: mean, max, mean_max.")
+            if method == "mean_max" and len(group) < 2:
+                raise ValueError(f"Family {family}: mean_max requires at least two cases.")
