@@ -29,12 +29,11 @@ def first_load_channel(df):
     Examples
     --------
     >>> import pandas as pd
-    >>> first_load_channel(pd.DataFrame({"Load": [1.0], "Load_filename": ["case"]}))
+    >>> first_load_channel(pd.DataFrame({"max_Load": [1.0], "max_Load_filename": ["case"]}))
     'Load'
     """
-    for column in df.columns:
-        if column != "Family" and not column.endswith("_filename"):
-            return column
+    for column in df.columns[1::6] if "Family" in df.columns else df.columns[::6]:
+        return column[len("max_"):]
 
     raise ValueError("No load channel column found in the ULS DataFrame.")
 
@@ -58,14 +57,14 @@ def plot_family_uls(family_uls, channel):
     Examples
     --------
     >>> import pandas as pd
-    >>> data = pd.DataFrame({"Family": [1], "Load": [10.0], "Load_filename": ["case"]})
+    >>> data = pd.DataFrame({"Family": [1], "AbsMax_Load": [10.0], "AbsMax_Load_filename": ["case"]})
     >>> fig, ax = plot_family_uls(data, "Load")
     >>> plt.close(fig)
     """
     fig, ax = plt.subplots(figsize=(10, 6))
     ax.bar(
         family_uls["Family"].astype(str),
-        family_uls[channel],
+        family_uls[f"AbsMax_{channel}"],
         color="tab:red",
     )
     ax.axhline(0, color="black", linewidth=0.8)
@@ -76,9 +75,9 @@ def plot_family_uls(family_uls, channel):
 
     for index, row in family_uls.iterrows():
         ax.annotate(            
-            pathlib.Path(row[f"{channel}_filename"]).stem,
-            xy=(index, row[channel]/2),
-            #xytext=(0, 5 if row[channel] >= 0 else -15),
+            pathlib.Path(row[f"AbsMax_{channel}_filename"]).stem,
+            xy=(index, row[f"AbsMax_{channel}"]/2),
+            #xytext=(0, 5 if row[f"AbsMax_{channel}"] >= 0 else -15),
             xytext=(0, 0),
             textcoords="offset points",
             ha="center",
@@ -104,13 +103,13 @@ console.print("Global ULS values: \n", ULS)
 console.print("Family ULS values: \n", Family_ULS)
 
 channel_to_plot = "Aerot._[kW]"
-if channel_to_plot not in Family_ULS.columns:
+if f"AbsMax_{channel_to_plot}" not in Family_ULS.columns:
     channel_to_plot = first_load_channel(Family_ULS)
 
 console.print(f"Plotting ULS channel: {channel_to_plot}")
 console.print(
     "Global ULS source filename:",
-    ULS[f"{channel_to_plot}_filename"].iloc[0],
+    ULS[f"AbsMax_{channel_to_plot}_filename"].iloc[0],
 )
 
 fig, ax = plot_family_uls(Family_ULS, channel_to_plot)

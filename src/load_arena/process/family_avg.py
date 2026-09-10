@@ -39,6 +39,11 @@ def calc_family_avg(all_stats: All_stats, df_input: pd.DataFrame) -> FamilyAvg:
     """
     Compute family-level statistics from concatenated time-series statistics.
 
+    The ``max`` method selects minima with min and maxima with max.
+    ``mean_max`` averages the smallest half of minima and largest half of
+    maxima; ``mean`` averages all values. Both raw and PLF tables follow
+    these rules.
+
     Parameters
     ----------
     all_stats : All_stats
@@ -133,24 +138,24 @@ def calc_family_avg(all_stats: All_stats, df_input: pd.DataFrame) -> FamilyAvg:
         elif method == "max":
             fam_mean = mask_mean.max(axis=0).to_frame().T # max values of each column
             fam_std = mask_std.max(axis=0).to_frame().T
-            fam_min = mask_min.max(axis=0).to_frame().T
+            fam_min = mask_min.min(axis=0).to_frame().T
             fam_max = mask_max.max(axis=0).to_frame().T
 
             fam_mean_plf = mask_mean_plf.max(axis=0).to_frame().T
             fam_std_plf = mask_std_plf.max(axis=0).to_frame().T
-            fam_min_plf = mask_min_plf.max(axis=0).to_frame().T
+            fam_min_plf = mask_min_plf.min(axis=0).to_frame().T
             fam_max_plf = mask_max_plf.max(axis=0).to_frame().T
 
             
         elif method == "mean_max":
             sorted_mean = mask_mean.apply(lambda x: x.sort_values(ascending=False).values)
             sorted_std = mask_std.apply(lambda x: x.sort_values(ascending=False).values)
-            sorted_min = mask_min.apply(lambda x: x.sort_values(ascending=False).values)
+            sorted_min = mask_min.apply(lambda x: x.sort_values(ascending=True).values)
             sorted_max = mask_max.apply(lambda x: x.sort_values(ascending=False).values)
 
             sorted_mean_plf = mask_mean_plf.apply(lambda x: x.sort_values(ascending=False).values)
             sorted_std_plf = mask_std_plf.apply(lambda x: x.sort_values(ascending=False).values)
-            sorted_min_plf = mask_min_plf.apply(lambda x: x.sort_values(ascending=False).values)
+            sorted_min_plf = mask_min_plf.apply(lambda x: x.sort_values(ascending=True).values)
             sorted_max_plf = mask_max_plf.apply(lambda x: x.sort_values(ascending=False).values)
 
             half_len = int(len(mask_mean)/2) # 1/2 of each input time series

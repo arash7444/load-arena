@@ -117,6 +117,9 @@ not a validated engineering campaign.
   No duration, probability, or lifetime normalization is inferred.
 - `FLSResult.per_case` and `.campaign` identify both `channel` and
   `wohler_exponent`. The result also retains `n_ref` and `method`.
+- ULS exports `uls/global.csv` with one row per channel and a separate CSV per
+  channel with independent Max, Min, and signed AbsMax family rankings. See
+  [ULS calculation and output schemas](docs/features/plf_uls_calculation_plan.md).
 - Methods return results and write CSVs in `statistics/`, `uls/`, and `fls/`
   below `output.directory`. Repeated runs replace known CSV outputs and retain
   unrelated files. Output failures raise errors; multi-file writes are not atomic.

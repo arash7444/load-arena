@@ -244,7 +244,45 @@ def test_statistics_and_uls_match_existing_pipeline(project_files, monkeypatch):
     pd.testing.assert_frame_equal(expected.Family_ULS, actual.Family_ULS)
     saved = pd.read_csv(project.config.output.directory / "statistics/mean.csv")
     assert saved.filename.tolist() == stats.filename
-    assert actual.ULS["Load_[kN]"].iloc[0] == 6
+    assert actual.ULS["AbsMax_Load_[kN]"].iloc[0] == 6
+    output = project.config.output.directory / "uls"
+    global_csv = pd.read_csv(output / "global.csv")
+    assert global_csv.columns.tolist() == [
+        "ChannelName_ULS", "Min_Ultimate_incl_psf", "Min_fileName",
+        "Max_Ultimate_incl_psf", "Max_fileName", "AbsMax_Ultimate_incl_psf", "AbsMax_fileName",
+    ]
+    assert global_csv.set_index("ChannelName_ULS").loc["Load_[kN]", "Min_Ultimate_incl_psf"] == -3
+    assert not (output / "family.csv").exists()
+
+    # Exercise independent ranks, signed AbsMax, ties, and Windows name collisions.
+    from load_arena.process.uls import ULSStats, _build_global_uls
+    family = pd.DataFrame({"Family": [1, 2, 3]})
+    channels = ["WSPgl._[m/s]", "WSPgl._[m_s]", "GLOBAL", "CON"]
+    for channel in channels:
+        for side, values, names in (
+            ("max", [5, 9, 9], ["max1", "max2", "max3"]),
+            ("min", [-12, -4, -8], ["min1", "min2", "min3"]),
+            ("AbsMax", [-12, 9, 9], ["min1", "max2", "max3"]),
+        ):
+            family[f"{side}_{channel}"] = values
+            family[f"{side}_{channel}_filename"] = names
+    synthetic = ULSStats(ULS=_build_global_uls(family), Family_ULS=family)
+    monkeypatch.setattr("load_arena.project.project.calc_uls", Mock(return_value=synthetic))
+    project.run_uls()
+    for filename in ("WSPgl._[m_s].csv", "WSPgl._[m_s]__2.csv", "GLOBAL__2.csv", "_CON.csv"):
+        ranking = pd.read_csv(output / filename)
+        assert ranking.columns.tolist() == [
+            "Max value", "Max Family", "Max filename", "Min Value", "Min Family", "Min filename",
+            "AbsMax value", "AbsMax Family", "AbsMax filename",
+        ]
+        assert ranking["Max Family"].tolist() == [2, 3, 1]
+        assert ranking["Min Family"].tolist() == [1, 3, 2]
+        assert ranking["AbsMax Family"].tolist() == [1, 2, 3]
+        assert ranking["Max filename"].tolist() == ["max2", "max3", "max1"]
+        assert ranking["Min filename"].tolist() == ["min1", "min3", "min2"]
+        assert ranking["AbsMax value"].tolist() == [-12, 9, 9]
+        assert ranking["AbsMax filename"].tolist() == ["min1", "max2", "max3"]
+
 
 
 def test_statistics_discovery_and_empty_directory(project_files, monkeypatch):

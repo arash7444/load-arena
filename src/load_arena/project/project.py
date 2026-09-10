@@ -2,6 +2,7 @@
 
 from dataclasses import dataclass
 from pathlib import Path
+import re
 
 import pandas as pd
 
@@ -126,7 +127,7 @@ class LoadArenaProject:
         return result
 
     def run_uls(self) -> ULSStats:
-        """Run the existing case-statistics, family-average, and ULS pipeline.
+        """Calculate ULS and export a global channel table and family rankings.
 
         Parameters
         ----------
@@ -136,7 +137,9 @@ class LoadArenaProject:
         Returns
         -------
         ULSStats
-            Global and per-family ULS values with source attribution.
+            Global and per-family min, max, and signed AbsMax values with source
+            attribution. CSVs contain one global row per channel and independent
+            family rankings in a separate, safely named file per channel.
 
         Examples
         --------
@@ -146,7 +149,45 @@ class LoadArenaProject:
         cases = load_cases(self.config, "uls")
         statistics = concatenate_stats(cases)
         result = calc_uls(calc_family_avg(statistics, cases), statistics)
-        self._write_tables("uls", {"global": result.ULS, "family": result.Family_ULS})
+        channels = [column[len("max_"):] for column in result.ULS.columns[::6]]
+        global_rows = []
+        tables = {}
+        used_names = {"global", "family"}
+        for channel in channels:
+            global_row = {"ChannelName_ULS": channel}
+            for side, label in (("min", "Min"), ("max", "Max"), ("AbsMax", "AbsMax")):
+                global_row[f"{label}_Ultimate_incl_psf"] = result.ULS[f"{side}_{channel}"].iloc[0]
+                global_row[f"{label}_fileName"] = result.ULS[f"{side}_{channel}_filename"].iloc[0]
+            global_rows.append(global_row)
+
+            ranked = {}
+            for side, label in (("max", "Max"), ("min", "Min"), ("AbsMax", "AbsMax")):
+                key = f"{side}_{channel}"
+                values = result.Family_ULS[key]
+                order = (values.abs() if side == "AbsMax" else values).sort_values(
+                    ascending=side == "min", kind="stable",
+                ).index
+                families = result.Family_ULS.loc[order]
+                ranked[f"{label} {'Value' if side == 'min' else 'value'}"] = families[key].tolist()
+                ranked[f"{label} Family"] = families["Family"].tolist()
+                ranked[f"{label} filename"] = families[f"{key}_filename"].tolist()
+
+            stem = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", channel).rstrip(" .") or "channel"
+            if stem.split(".")[0].upper() in {
+                "CON", "PRN", "AUX", "NUL",
+                *(f"COM{i}" for i in range(1, 10)),
+                *(f"LPT{i}" for i in range(1, 10)),
+            }:
+                stem = f"_{stem}"
+            name = stem
+            suffix = 2
+            while name.casefold() in used_names:
+                name = f"{stem}__{suffix}"
+                suffix += 1
+            used_names.add(name.casefold())
+            tables[name] = pd.DataFrame(ranked)
+        tables = {"global": pd.DataFrame(global_rows), **tables}
+        self._write_tables("uls", tables)
         return result
 
     def run_fls(self) -> FLSResult:

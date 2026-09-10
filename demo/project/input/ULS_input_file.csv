@@ -1,0 +1,13 @@
+﻿Folder,Case_folder,Timeseries,Family,PLF,Averaging_method
+d:\Arash_repo\load-arena\tests\h2_res\dlc12\,dlc12,dlc12_wsp04_wdir000_s023004,1,1.5,mean
+d:\Arash_repo\load-arena\tests\h2_res\dlc12\,dlc12,dlc12_wsp04_wdir000_s034004,1,1.5,mean
+d:\Arash_repo\load-arena\tests\h2_res\dlc12\,dlc12,dlc12_wsp12_wdir000_s027012,2,2,max
+d:\Arash_repo\load-arena\tests\h2_res\dlc12\,dlc12,dlc12_wsp12_wdir000_s038012,2,2,max
+d:\Arash_repo\load-arena\tests\h2_res\dlc13\,dlc13,dlc13_wsp04_wdir000_s023004,3,3,mean
+d:\Arash_repo\load-arena\tests\h2_res\dlc13\,dlc13,dlc13_wsp04_wdir000_s034004,3,3,mean
+d:\Arash_repo\load-arena\tests\h2_res\dlc13\,dlc13,dlc13_wsp04_wdir-008_s001004,4,1,mean
+d:\Arash_repo\load-arena\tests\h2_res\dlc13\,dlc13,dlc13_wsp04_wdir-008_s012004,4,1,mean
+d:\Arash_repo\load-arena\tests\h2_res\dlc13\,dlc13,dlc13_wsp20_wdir000_s031020,5,1,mean
+d:\Arash_repo\load-arena\tests\h2_res\dlc13\,dlc13,dlc13_wsp20_wdir000_s042020,5,1,mean
+d:\Arash_repo\load-arena\tests\h2_res\dlc13\,dlc13,dlc13_wsp20_wdir-008_s009020,6,1,mean
+d:\Arash_repo\load-arena\tests\h2_res\dlc13\,dlc13,dlc13_wsp20_wdir-008_s020020,6,1,mean

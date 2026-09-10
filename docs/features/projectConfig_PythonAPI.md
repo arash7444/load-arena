@@ -103,7 +103,7 @@ Return `ULSStats` unchanged. ULS computes its required statistics even when stan
 Return structured results and write CSVs after successful calculation:
 
 - `statistics/`: mean, standard deviation, minimum, and maximum tables with filename identity.
-- `uls/`: global and family ULS tables with source filename columns.
+- `uls/`: `global.csv` has one row per channel with Min, Max, and signed AbsMax values and filenames. A separate sanitized `<channel>.csv` independently ranks families by Max, Min, and absolute magnitude. See [ULS calculation](plf_uls_calculation_plan.md) for schemas and aggregation rules.
 - `fls/`: per-case and campaign DEL tables identifying both channel and Wöhler exponent, with reference count and method.
 
 Create directories lazily. Repeat runs replace only known output files and preserve unrelated files. Propagate write failures clearly; transactional multi-file export remains outside v1.

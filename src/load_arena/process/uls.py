@@ -216,8 +216,9 @@ def _build_family_uls(family_stats: FamilyAvg, all_stats: All_stats) -> pd.DataF
     Returns
     -------
     pd.DataFrame
-        Family ULS table with a leading ``Family`` column and companion
-        ``<channel>_filename`` columns.
+        Family ULS table with a leading ``Family`` column and ``max_<channel>``,
+        ``min_<channel>``, and ``AbsMax_<channel>`` values, each accompanied by
+        a ``_filename`` column. Averaged values use the closest source file.
 
     Examples
     --------
@@ -232,15 +233,15 @@ def _build_family_uls(family_stats: FamilyAvg, all_stats: All_stats) -> pd.DataF
         row = {"Family": family}
 
         for channel in channels:
+            for side, source_row in (("max", max_row), ("min", min_row)):
+                value = source_row[channel]
+                row[f"{side}_{channel}"] = value
+                row[f"{side}_{channel}_filename"] = _filename_for_extreme(
+                    all_stats, family, channel, side, value,
+                )
             value, side = _choose_extreme(min_row[channel], max_row[channel])
-            row[channel] = value
-            row[f"{channel}_filename"] = _filename_for_extreme(
-                all_stats,
-                family,
-                channel,
-                side,
-                value,
-            )
+            row[f"AbsMax_{channel}"] = value
+            row[f"AbsMax_{channel}_filename"] = row[f"{side}_{channel}_filename"]
 
         rows.append(row)
 
@@ -254,36 +255,43 @@ def _build_global_uls(family_uls: pd.DataFrame) -> pd.DataFrame:
     Parameters
     ----------
     family_uls : pd.DataFrame
-        Family ULS table with numeric channel columns and matching filename
-        companion columns.
+        Family ULS table with separate max, min, and signed AbsMax values and
+        matching filename columns for each channel.
 
     Returns
     -------
     pd.DataFrame
-        One-row global ULS table without the ``Family`` column.
+        One-row global ULS table without ``Family``, selecting the largest max,
+        smallest min, and signed absolute extreme independently per channel.
+        Equal absolute magnitudes prefer max; same-side ties use the first family.
 
     Examples
     --------
-    >>> family_uls = pd.DataFrame(
-    ...     {"Family": [1, 2], "Load": [-4.0, 3.0], "Load_filename": ["a", "b"]}
-    ... )
-    >>> _build_global_uls(family_uls)["Load"].iloc[0]
+    >>> family_uls = pd.DataFrame({
+    ...     "Family": [1, 2], "max_Load": [2.0, 3.0],
+    ...     "max_Load_filename": ["a", "b"], "min_Load": [-4.0, -2.0],
+    ...     "min_Load_filename": ["a", "b"],
+    ...     "AbsMax_Load": [-4.0, 3.0], "AbsMax_Load_filename": ["a", "b"],
+    ... })
+    >>> _build_global_uls(family_uls)["AbsMax_Load"].iloc[0]
     -4.0
     """
     row = {}
     channels = [
-        column
-        for column in family_uls.columns
-        if column != "Family" and not column.endswith("_filename")
+        column[len("max_"):]
+        for column in family_uls.columns[1::6]
     ]
 
     for channel in channels:
-        source_index = family_uls[channel].abs().idxmax()
-        row[channel] = family_uls.loc[source_index, channel]
-        row[f"{channel}_filename"] = family_uls.loc[
-            source_index,
-            f"{channel}_filename",
-        ]
+        for side in ("max", "min"):
+            key = f"{side}_{channel}"
+            values = family_uls[key]
+            source_index = values.idxmax() if side == "max" else values.idxmin()
+            row[key] = family_uls.loc[source_index, key]
+            row[f"{key}_filename"] = family_uls.loc[source_index, f"{key}_filename"]
+        value, side = _choose_extreme(row[f"min_{channel}"], row[f"max_{channel}"])
+        row[f"AbsMax_{channel}"] = value
+        row[f"AbsMax_{channel}_filename"] = row[f"{side}_{channel}_filename"]
 
     return pd.DataFrame([row])
 

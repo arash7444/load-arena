@@ -51,3 +51,9 @@ The preferred fix is to make channel names unique when data is first converted t
 - It is acceptable that all downstream outputs now see unique suffixed channel names instead of duplicate pandas columns.
 - Suffixing starts at `__2`; the first channel keeps its original name.
 - Wide DataFrame output remains preferred over MultiIndex or long-format ULS output because it keeps plotting and demo usage simple.
+
+## Updated ULS schema
+
+The duplicate-name normalization remains in place. The old channel/value filename
+pairs described above are superseded by the six-field Min/Max/AbsMax schema in
+[PLF ULS calculation](../features/plf_uls_calculation_plan.md).

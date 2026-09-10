@@ -196,6 +196,21 @@ def test_calc_family_avg_mean_collects_family_metadata():
     assert family_stats.family_name == [1]
     assert family_stats.filename == [["case_001", "case_002"]]
 
+    # Four signed samples distinguish the lowest half from the highest half.
+    df_input = pd.concat([df_input, df_input], ignore_index=True)
+    all_stats.family = [1] * 4
+    all_stats.filename = ["a", "b", "c", "d"]
+    for statistic in ("mean", "std", "min", "max", "mean_plf", "std_plf", "min_plf", "max_plf"):
+        values = [-12.0, -8.0, -4.0, -2.0] if statistic.startswith("min") else [1.0, 3.0, 5.0, 9.0]
+        setattr(all_stats, statistic, pd.DataFrame({"Load": values}))
+    for method, expected_min, expected_max in (("mean", -6.5, 4.5), ("max", -12.0, 9.0), ("mean_max", -10.0, 7.0)):
+        df_input["Averaging_method"] = method
+        aggregated = calc_family_avg(all_stats, df_input)
+        for suffix in ("", "_plf"):
+            assert getattr(aggregated, f"min{suffix}")["Load"].iloc[0] == expected_min
+            assert getattr(aggregated, f"max{suffix}")["Load"].iloc[0] == expected_max
+
+
 
 def test_calc_family_avg_supports_grouping_by_family_column():
     """Verify that family-level statistic dataframes can be grouped by Family.
