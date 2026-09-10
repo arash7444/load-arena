@@ -147,7 +147,7 @@ class LoadArenaProject:
         """
         self._require_enabled("uls")
         cases = load_cases(self.config, "uls")
-        statistics = concatenate_stats(cases)
+        statistics = concatenate_stats(cases, channels=self.config.analysis.uls.channels)
         result = calc_uls(calc_family_avg(statistics, cases), statistics)
         channels = [column[len("max_"):] for column in result.ULS.columns[::6]]
         global_rows = []
@@ -191,7 +191,7 @@ class LoadArenaProject:
         return result
 
     def run_fls(self) -> FLSResult:
-        """Calculate and export all numeric channels for every configured exponent.
+        """Calculate and export selected channels for every configured exponent.
 
         Parameters
         ----------
@@ -210,7 +210,8 @@ class LoadArenaProject:
         self._require_enabled("fls")
         cases = load_cases(self.config, "fls")
         settings = self.config.analysis.fls
-        result = calc_fls(cases, settings.wohler_exponents, settings.n_ref, settings.method)
+        result = calc_fls(cases, settings.wohler_exponents, settings.n_ref, settings.method,
+                          channels=settings.channels)
         tables = {name: getattr(result, name).assign(n_ref=result.n_ref, method=result.method)
                   for name in ("per_case", "campaign")}
         self._write_tables("fls", tables)

@@ -11,9 +11,11 @@ analysis:
   uls:
     enabled: true
     cases: input/ULS_input_file.csv
+    channels: ["WSPgl._[m/s]", "Azi1_[deg]"]
   fls:
     enabled: true
     cases: input/FLS_input_file.csv
+    channels: all
     wohler_exponents: [4, 6, 8, 10, 12]
     n_ref: 10000000
     method: windap

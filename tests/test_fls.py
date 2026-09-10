@@ -45,10 +45,10 @@ def test_multi_channel_multi_exponent_weighting(fls_inputs, method):
     Examples: pytest tests/test_fls.py -k weighting
     """
     cases, samples = fls_inputs
-    result = calc_fls(cases, [4, 6, 8, 10, 12], 100, method)
-    assert len(result.per_case) == 3 * 4 * 5
-    assert len(result.campaign) == 4 * 5
-    assert set(result.per_case.channel) == {"time", "load", "other", "azimuth"}
+    result = calc_fls(cases, [4, 6, 8, 10, 12], 100, method, channels=["load", "other"])
+    assert len(result.per_case) == 3 * 2 * 5
+    assert len(result.campaign) == 2 * 5
+    assert set(result.per_case.channel) == {"load", "other"}
     assert set(result.per_case.case_row) == {2, 3, 4}
     assert result.n_ref == 100
     assert result.method == method
@@ -72,8 +72,8 @@ def test_duplicate_exponents_do_not_double_weight(fls_inputs):
     Examples: pytest tests/test_fls.py -k duplicate
     """
     cases, samples = fls_inputs
-    result = calc_fls(cases, [4, 4], 100, "astm")
-    assert len(result.campaign) == 4
+    result = calc_fls(cases, [4, 4], 100, "astm", channels=["load", "other"])
+    assert len(result.campaign) == 2
     expected = (2 * calc_del(samples[0]["load"], 4, 100, "astm")**4 +
                 5 * calc_del(samples[1]["load"], 4, 100, "astm")**4)**0.25
     assert result.campaign.query("channel == 'load'").DEL.iloc[0] == pytest.approx(expected)
@@ -88,7 +88,7 @@ def test_zero_occurrences(fls_inputs):
     """
     cases, _ = fls_inputs
     cases["Occurrences"] = 0
-    result = calc_fls(cases, [4, 10], 100, "astm")
+    result = calc_fls(cases, [4, 10], 100, "astm", channels=["load", "other"])
     assert (result.campaign.DEL == 0).all()
     assert (result.per_case.DEL > 0).any()
 
@@ -104,7 +104,7 @@ def test_constant_channels_preserve_warning(fls_inputs):
     for sample in samples:
         sample["load"] = 1.0
     with pytest.warns(RuntimeWarning, match="no variation"):
-        result = calc_fls(cases, [4, 10], 100, "astm")
+        result = calc_fls(cases, [4, 10], 100, "astm", channels=["load", "other"])
     assert (result.campaign.query("channel == 'load'").DEL == 0).all()
 
 
@@ -118,7 +118,7 @@ def test_invalid_signal_has_case_channel_exponent_context(fls_inputs):
     cases, samples = fls_inputs
     samples[0].loc[1, "load"] = np.nan
     with pytest.raises(ValueError, match="CSV row 2.*channel load.*wohler_exponent 4"):
-        calc_fls(cases, [4], 100, "astm")
+        calc_fls(cases, [4], 100, "astm", channels=["load", "other"])
 
 
 @pytest.mark.parametrize("exponents,n_ref,method", [([], 100, "astm"), ([0], 100, "astm"),
@@ -133,4 +133,29 @@ def test_invalid_fls_parameters(fls_inputs, exponents, n_ref, method):
     """
     cases, _ = fls_inputs
     with pytest.raises(ValueError):
-        calc_fls(cases, exponents, n_ref, method)
+        calc_fls(cases, exponents, n_ref, method, channels=["load"])
+
+
+@pytest.mark.parametrize("channels", [[], ["load", "load"], [""], [1], None])
+def test_invalid_channels(fls_inputs, channels):
+    """Reject invalid selections in direct FLS calls.
+
+    Parameters: fls_inputs supplies cases; channels is an invalid selection.
+    Returns: None; validation raises before simulation processing.
+    Examples: pytest tests/test_fls.py -k invalid_channels
+    """
+    cases, _ = fls_inputs
+    with pytest.raises(ValueError, match="channels"):
+        calc_fls(cases, [4], 100, channels=channels)
+
+
+def test_selected_channel_order(fls_inputs):
+    """Preserve selection order, including explicitly selected time.
+
+    Parameters: fls_inputs supplies simulation samples.
+    Returns: None; result rows follow the explicit selection.
+    Examples: pytest tests/test_fls.py -k selected_channel_order
+    """
+    cases, _ = fls_inputs
+    result = calc_fls(cases, [4], 100, "astm", channels=["other", "time", "load"])
+    assert result.campaign.channel.tolist() == ["other", "time", "load"]

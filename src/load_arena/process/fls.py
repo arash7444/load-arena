@@ -9,6 +9,7 @@ import pandas as pd
 from load_arena.case_loader.input_reader import validate_case_rows
 from load_arena.data_reader.Hawc2io import ReadHawc2, toDataFrame
 from load_arena.process.calc_del import calc_del
+from load_arena.utils.channels import ChannelSelection, select_channels, validate_channels
 
 
 @dataclass
@@ -26,19 +27,23 @@ def calc_fls(
     wohler_exponents: list[float],
     n_ref: float,
     method: str = "windap",
+    *,
+    channels: ChannelSelection,
 ) -> FLSResult:
-    """Calculate DELs for every numeric channel and shared Wöhler exponent.
+    """Calculate DELs for selected channels and shared Wöhler exponents.
 
     Parameters
     ----------
     cases : pandas.DataFrame
         Validated FLS cases with Folder, Timeseries, and Occurrences columns.
     wohler_exponents : list[float]
-        Positive finite exponents applied to every numeric channel, including time.
+        Positive finite exponents applied to every selected channel.
     n_ref : float
         Positive reference cycle count shared by every case and channel.
     method : {"windap", "astm"}, default "windap"
         Existing rainflow counting method.
+    channels : list[str] or {"all"}
+        Nonempty, unique names present in every case, or all simulation channels.
 
     Returns
     -------
@@ -48,9 +53,11 @@ def calc_fls(
 
     Examples
     --------
-    >>> result = calc_fls(cases, wohler_exponents=[4, 10], n_ref=1e7)
+    >>> result = calc_fls(cases, [4, 10], 1e7, channels=["Load_[kN]"])
     """
     validate_case_rows(cases, "fls")
+    if channels != "all":
+        validate_channels(channels)
     if not isinstance(wohler_exponents, list) or not wohler_exponents:
         raise ValueError("wohler_exponents must be a nonempty list.")
     for name, values in (("wohler_exponents", wohler_exponents), ("n_ref", [n_ref])):
@@ -71,13 +78,11 @@ def calc_fls(
             data = toDataFrame(reader.ReadAll(), reader.ChInfo)
         except Exception as exc:
             raise ValueError(f"FLS CSV row {case_row}, simulation {filename}: {exc}") from exc
-        numeric = data.select_dtypes(include="number")
-        if numeric.empty:
-            raise ValueError(f"FLS CSV row {case_row}, {filename}: no numeric samples.")
-        for channel in numeric.columns:
+        selected = select_channels(data, channels, f"FLS CSV row {case_row}, {filename}")
+        for channel in selected.columns:
             for exponent in exponents:
                 try:
-                    value = calc_del(numeric[channel], exponent, n_ref, method=method)
+                    value = calc_del(selected[channel], exponent, n_ref, method=method)
                     if not np.isfinite(value):
                         raise ValueError("DEL is not finite.")
                 except (TypeError, ValueError, FloatingPointError) as exc:

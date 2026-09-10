@@ -108,9 +108,18 @@ not a validated engineering campaign.
   `ProjectConfigError`. Each method runs independently and rereads its case CSV.
 - Statistics recursively processes HAWC2 `.int`, `.res`, and `.sel` results;
   `.dat` is a companion, and HDF5 and other software are unsupported in this API.
-- FLS processes **every numeric channel, including time and non-load signals**,
-  for every `wohler_exponents` value. There is no channel-selection configuration.
-  `n_ref` is shared; `method` is `windap` (default) or `astm`.
+- Enabled ULS and FLS sections require `channels`: an inline list such as
+  `channels: ["WSPgl._[m/s]"]`, a CSV path such as `channels: input/channels.csv`,
+  or `channels: all` to include every channel in each simulation (including time).
+  The CSV must contain a `Channel` column. Paths are relative to the YAML file;
+  both forms normalize to a nonempty list of unique, nonblank names. Names match
+  reader columns exactly, including units and duplicate-name suffixes. Each run
+  checks the selection in every referenced simulation and processes only those
+  channels, in selection order. Missing channels raise an error identifying the file.
+- FLS applies every `wohler_exponents` value to the selected channels. Time and
+  other numeric columns are included when explicitly selected or with `channels: all`. `n_ref` is
+  shared; `method` is `windap` (default) or `astm`. Direct `calc_fls()` calls also
+  require the `channels` keyword argument.
 - `Occurrences` means repetitions of the complete recorded simulation. For each
   channel and exponent `m`, campaign DEL is
   `(sum(Occurrences * case_DEL**m))**(1/m)`, using the same `n_ref` for all cases.

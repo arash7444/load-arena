@@ -10,6 +10,7 @@ import yaml
 from load_arena.case_loader.input_reader import (
     read_fls_input_file, read_uls_input_file, validate_case_rows,
 )
+from load_arena.utils.channels import validate_channels
 
 
 class ProjectConfigError(ValueError):
@@ -41,6 +42,7 @@ def _nonblank_path(value: object) -> object:
 
 ProjectPath = Annotated[Path, BeforeValidator(_nonblank_path)]
 PositiveNumber = Annotated[float, Field(strict=True, gt=0, allow_inf_nan=False)]
+ChannelList = Annotated[list[str], BeforeValidator(validate_channels)]
 
 
 class _ConfigModel(BaseModel):
@@ -73,13 +75,15 @@ class ULSConfig(_ConfigModel):
 
     enabled: StrictBool = False
     cases: ProjectPath | None = None
+    channels: Literal["all"] | ChannelList | ProjectPath | None = None
 
 
 class FLSConfig(_ConfigModel):
-    """FLS cases and parameters shared across all numeric channels."""
+    """FLS cases and parameters shared across selected channels."""
 
     enabled: StrictBool = False
     cases: ProjectPath | None = None
+    channels: Literal["all"] | ChannelList | ProjectPath | None = None
     wohler_exponents: Annotated[list[PositiveNumber], Field(min_length=1)] | None = None
     n_ref: PositiveNumber | None = None
     method: Literal["windap", "astm"] = "windap"
@@ -127,7 +131,9 @@ class ProjectConfig(_ConfigModel):
         """
         for name in ("uls", "fls"):
             section = getattr(self.analysis, name)
-            fields = ("cases",) if name == "uls" else ("cases", "wohler_exponents", "n_ref")
+            fields = ("cases", "channels") if name == "uls" else (
+                "cases", "channels", "wohler_exponents", "n_ref",
+            )
             for field in fields:
                 if section.enabled and getattr(section, field) is None:
                     raise ValueError(f"analysis.{name}.{field} is required when enabled.")
@@ -200,6 +206,15 @@ def load_config(path: str | Path) -> tuple[Path, ProjectConfig]:
         for section in (config.analysis.uls, config.analysis.fls):
             if section.cases is not None:
                 section.cases = (source.parent / section.cases).resolve()
+            if isinstance(section.channels, Path):
+                channel_path = (source.parent / section.channels).resolve()
+                try:
+                    table = pd.read_csv(channel_path, dtype=str, keep_default_na=False)
+                    if "Channel" not in table.columns:
+                        raise ValueError("Channel CSV must contain a 'Channel' column.")
+                    section.channels = validate_channels(table["Channel"].tolist())
+                except (OSError, UnicodeError, ValueError) as exc:
+                    raise ValueError(f"channels ({channel_path}): {exc}") from exc
         if not config.data.results_path.is_dir():
             raise ValueError(f"data.results_path is not a directory: {config.data.results_path}")
         return source, config

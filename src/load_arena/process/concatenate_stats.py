@@ -6,6 +6,7 @@ from load_arena.data_reader import ReadHawc2
 from load_arena.data_reader import toDataFrame
 from load_arena.process.simple_stats import calc_stats
 from load_arena.case_loader.input_reader import validate_input_columns, validate_case_rows
+from load_arena.utils.channels import ChannelSelection, select_channels, validate_channels
 import os
 from rich.console import Console
 from rich.traceback import install
@@ -28,7 +29,7 @@ class All_stats:
     family: list[str]
 
 
-def concatenate_stats(input_file_df: list | pd.DataFrame) -> All_stats:
+def concatenate_stats(input_file_df: list | pd.DataFrame, channels: ChannelSelection | None = None) -> All_stats:
     """
     Calculate and concatenate statistics for simulation paths or ULS cases.
 
@@ -36,6 +37,8 @@ def concatenate_stats(input_file_df: list | pd.DataFrame) -> All_stats:
     -----------
         input_file_df: list or pandas.DataFrame
             A list of file paths corresponding to the statistics or  a Dataframe from input file
+        channels: list[str], {"all"}, or None
+            Selected names or all channels; None preserves standalone statistics.
 
     Returns:
     --------
@@ -47,6 +50,8 @@ def concatenate_stats(input_file_df: list | pd.DataFrame) -> All_stats:
     >>> stats = concatenate_stats(["results/case.int"])
     """
 
+    if channels is not None and channels != "all":
+        validate_channels(channels)
     all_stats = All_stats(
         mean=pd.DataFrame(),
         std=pd.DataFrame(),
@@ -84,6 +89,8 @@ def concatenate_stats(input_file_df: list | pd.DataFrame) -> All_stats:
         data = res_file.ReadAll()
         info = res_file.ChInfo
         df = toDataFrame(data, info)
+        if channels is not None:
+            df = select_channels(df, channels, f"ULS simulation {file}")
 
         stat_mean, stat_std, stat_min, stat_max = calc_stats(df)
         stat_mean_plf = stat_mean * PLF_list[i]

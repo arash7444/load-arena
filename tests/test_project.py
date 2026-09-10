@@ -37,8 +37,8 @@ def project_files(tmp_path):
         "data": {"software": "HAWC2", "results_path": "simulations"},
         "analysis": {
             "statistics": {"enabled": True},
-            "uls": {"enabled": True, "cases": "cases.csv"},
-            "fls": {"enabled": True, "cases": "cases.csv",
+            "uls": {"enabled": True, "cases": "cases.csv", "channels": ["Load_[kN]"]},
+            "fls": {"enabled": True, "cases": "cases.csv", "channels": ["Load_[kN]"],
                     "wohler_exponents": [4, 6], "n_ref": 100, "method": "astm"},
         },
         "output": {"directory": "outputs"},
@@ -90,7 +90,7 @@ def test_preflight_resolves_paths_without_reading_samples(project_files, monkeyp
     (("analysis", "fls", "n_ref"), -1),
     (("analysis", "fls", "n_ref"), float("nan")),
     (("analysis", "fls", "method"), "unknown"),
-    (("analysis", "fls", "channels"), ["Load"]),
+    (("analysis", "fls", "channels"), []),
     (("analysis", "fls", "wohler_exponent"), 4),
 ])
 def test_invalid_configuration(project_files, keys, value):
@@ -237,7 +237,7 @@ def test_statistics_and_uls_match_existing_pipeline(project_files, monkeypatch):
     assert [Path(name).name for name in stats.filename] == ["a.int", "b.res"]
     assert stats.mean["Load_[kN]"].iloc[0] == pytest.approx(2 / 3)
     cases = load_cases(project.config, "uls")
-    direct_stats = concatenate_stats(cases)
+    direct_stats = concatenate_stats(cases, channels=project.config.analysis.uls.channels)
     expected = calc_uls(calc_family_avg(direct_stats, cases), direct_stats)
     actual = project.run_uls()
     pd.testing.assert_frame_equal(expected.ULS, actual.ULS)
@@ -356,12 +356,136 @@ def test_real_fixture_uls(tmp_path):
     table.to_csv(tmp_path / "cases.csv", index=False)
     document = {"project": {"name": "Real fixture"},
                 "data": {"software": "HAWC2", "results_path": str(root)},
-                "analysis": {"uls": {"enabled": True, "cases": "cases.csv"}},
+                "analysis": {"uls": {"enabled": True, "cases": "cases.csv", "channels": ["WSPgl._[m/s]"]}},
                 "output": {"directory": "out"}}
     path = tmp_path / "project.yaml"
     path.write_text(yaml.safe_dump(document), encoding="utf-8")
     project = LoadArenaProject.from_yaml(path)
     cases = load_cases(project.config, "uls")
-    stats = concatenate_stats(cases)
+    stats = concatenate_stats(cases, channels=project.config.analysis.uls.channels)
     direct = calc_uls(calc_family_avg(stats, cases), stats)
     pd.testing.assert_frame_equal(project.run_uls().ULS, direct.ULS)
+
+
+@pytest.mark.parametrize("mode", ["uls", "fls"])
+@pytest.mark.parametrize("selection", [[], ["Load_[kN]", "Load_[kN]"], [""], [" "], [1], None])
+def test_invalid_channel_selection(project_files, mode, selection):
+    """Reject malformed selections for either enabled analysis.
+
+    Parameters: project_files supplies YAML; mode and selection select invalid input.
+    Returns: None; invalid selections raise configuration errors.
+    Examples: pytest tests/test_project.py -k invalid_channel_selection
+    """
+    path, document = project_files
+    document["analysis"][mode]["channels"] = selection
+    path.write_text(yaml.safe_dump(document), encoding="utf-8")
+    with pytest.raises(ProjectConfigError, match="channels"):
+        LoadArenaProject.from_yaml(path)
+
+
+@pytest.mark.parametrize("mode", ["uls", "fls"])
+@pytest.mark.parametrize("content,valid", [
+    ("Channel,Note\nLoad_[kN],selected\nTime_[s],explicit\n", True),
+    ("Channel\nNA\n001\n", True),
+    ("Other\nLoad_[kN]\n", False), ("Channel\n", False),
+    ("Channel\nLoad_[kN]\nLoad_[kN]\n", False),
+    ('Channel\n""\n', False),
+])
+def test_channel_csv_normalization(project_files, monkeypatch, tmp_path, mode, content, valid):
+    """Normalize YAML-relative CSV selections and reject invalid channel tables.
+
+    Parameters: Fixtures supply paths; mode, content, and valid describe the CSV.
+    Returns: None; selections preserve exact strings and row order or fail clearly.
+    Examples: pytest tests/test_project.py -k channel_csv
+    """
+    path, document = project_files
+    csv = path.parent / "channels.csv"
+    csv.write_text(content, encoding="utf-8")
+    document["analysis"][mode]["channels"] = "channels.csv"
+    path.write_text(yaml.safe_dump(document), encoding="utf-8")
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+    if valid:
+        project = LoadArenaProject.from_yaml(path)
+        assert getattr(project.config.analysis, mode).channels == pd.read_csv(
+            csv, dtype=str, keep_default_na=False,
+        ).Channel.tolist()
+    else:
+        with pytest.raises(ProjectConfigError, match="channels.csv"):
+            LoadArenaProject.from_yaml(path)
+
+
+@pytest.mark.parametrize("mode", ["uls", "fls"])
+def test_project_selection_and_missing_channel_in_later_file(project_files, monkeypatch, mode):
+    """Restrict calculations and reject channels missing only from a later case.
+
+    Parameters: project_files supplies configuration; monkeypatch mocks readers; mode selects analysis.
+    Returns: None; selected results and missing-file errors are checked.
+    Examples: pytest tests/test_project.py -k later_file
+    """
+    path, _ = project_files
+    project = LoadArenaProject.from_yaml(path)
+    module = import_module("load_arena.process.concatenate_stats" if mode == "uls"
+                           else "load_arena.process.fls")
+    samples = pd.DataFrame({"Time_[s]": [0., 1., 2., 3., 4.],
+                            "Load_[kN]": [0., 2., 0., -2., 0.],
+                            "Ignored": [float("nan")] * 5})
+    reader = Mock()
+    reader.ReadAll.return_value = samples
+    monkeypatch.setattr(module, "ReadHawc2", Mock(return_value=reader))
+    conversion = Mock(side_effect=[samples, samples])
+    monkeypatch.setattr(module, "toDataFrame", conversion)
+    result = getattr(project, f"run_{mode}")()
+    if mode == "uls":
+        assert result.ULS.columns.tolist() == [
+            f"{side}_Load_[kN]{suffix}" for side in ("max", "min", "AbsMax")
+            for suffix in ("", "_filename")
+        ]
+    else:
+        assert result.campaign.channel.unique().tolist() == ["Load_[kN]"]
+    conversion.side_effect = [samples, samples.drop(columns="Load_[kN]")]
+    with pytest.raises(ValueError, match=r"b.res.*Load_\[kN\]"):
+        getattr(project, f"run_{mode}")()
+
+
+@pytest.mark.parametrize("mode", ["uls", "fls"])
+def test_all_channels_yaml_and_processing(project_files, monkeypatch, mode):
+    """Expand the YAML all keyword to every simulation channel in reader order.
+
+    Parameters: project_files supplies YAML; monkeypatch mocks readers; mode selects analysis.
+    Returns: None; all channels, including time, appear in calculated results.
+    Examples: pytest tests/test_project.py -k all_channels
+    """
+    path, document = project_files
+    document["analysis"][mode]["channels"] = "all"
+    path.write_text(yaml.safe_dump(document), encoding="utf-8")
+    project = LoadArenaProject.from_yaml(path)
+    assert getattr(project.config.analysis, mode).channels == "all"
+    module = import_module("load_arena.process.concatenate_stats" if mode == "uls"
+                           else "load_arena.process.fls")
+    samples = pd.DataFrame({"Time_[s]": [0., 1., 2., 3., 4.],
+                            "Load_[kN]": [0., 2., 0., -2., 0.],
+                            "Other": [1., 3., 1., -3., 1.]})
+    reader = Mock()
+    reader.ReadAll.return_value = samples
+    monkeypatch.setattr(module, "ReadHawc2", Mock(return_value=reader))
+    monkeypatch.setattr(module, "toDataFrame", Mock(return_value=samples))
+    result = getattr(project, f"run_{mode}")()
+    if mode == "uls":
+        assert result.ULS.columns[::6].tolist() == [f"max_{name}" for name in samples.columns]
+    else:
+        assert result.campaign.channel.unique().tolist() == samples.columns.tolist()
+
+
+def test_all_in_channel_list_is_literal(project_files):
+    """Keep all as a literal channel name when supplied inside a list.
+
+    Parameters: project_files supplies editable YAML.
+    Returns: None; only the scalar keyword has wildcard meaning.
+    Examples: pytest tests/test_project.py -k is_literal
+    """
+    path, document = project_files
+    document["analysis"]["uls"]["channels"] = ["all"]
+    path.write_text(yaml.safe_dump(document), encoding="utf-8")
+    assert LoadArenaProject.from_yaml(path).config.analysis.uls.channels == ["all"]
