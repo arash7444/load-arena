@@ -236,6 +236,10 @@ def test_statistics_and_uls_match_existing_pipeline(project_files, monkeypatch):
     stats = project.run_statistics()
     assert [Path(name).name for name in stats.filename] == ["a.int", "b.res"]
     assert stats.mean["Load_[kN]"].iloc[0] == pytest.approx(2 / 3)
+    figure = stats.explore(channel="Load_[kN]", statistic="mean", show=False)
+    assert len(figure.data) == 1
+    assert list(figure.data[0].x) == [0, 1]
+    assert list(figure.data[0].y) == pytest.approx([2 / 3, 2 / 3])
     cases = load_cases(project.config, "uls")
     direct_stats = concatenate_stats(cases, channels=project.config.analysis.uls.channels)
     expected = calc_uls(calc_family_avg(direct_stats, cases), direct_stats)

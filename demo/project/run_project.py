@@ -1,5 +1,6 @@
 """Run a portable, illustrative campaign against the checked-in HAWC2 fixtures."""
 
+from load_arena.visualization import statistics_plots
 from pathlib import Path
 
 from load_arena import LoadArenaProject
@@ -38,6 +39,12 @@ def main() -> None:
     ch_tmp.files
     ch_tmp.rainflow_results
     ch_tmp.campaign
+
+
+
+    statistics.explore(channel="Aerot._[kW]", statistic="mean")
+
+    input("Press enter to exit")
 
 
 if __name__ == "__main__":

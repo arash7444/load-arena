@@ -6,9 +6,7 @@ from typing import TYPE_CHECKING, Literal
 
 import pandas as pd
 import plotly.graph_objects as go
-from plotly.colors import qualitative
 
-from load_arena.process.concatenate_stats import _validate_statistics_metadata
 
 if TYPE_CHECKING:
     from load_arena.process.concatenate_stats import All_stats
@@ -18,21 +16,21 @@ def plot_statistics(
     stats: "All_stats", *, channel: str,
     statistic: Literal["mean", "std", "min", "max"],
 ) -> go.Figure:
-    """Build simulation and arithmetic family-average traces without displaying.
+    """Build an interactive plot of stored simulation values without displaying.
 
     Parameters
     ----------
     stats : All_stats
-        Raw statistics with positional filename, dlc, and wind_speed lists.
+        Raw statistics and the existing positional filename list.
     channel : str
         Exact, unambiguous column name in the selected statistics table.
     statistic : {"mean", "std", "min", "max"}
-        Per-simulation statistic; families use exact DLC and nominal speed pairs.
+        Raw per-simulation statistic to display.
 
     Returns
     -------
     plotly.graph_objects.Figure
-        One simulation trace and one average trace per DLC. Invalid data raises
+        Simulation values plotted by zero-based row position. Invalid data raises
         ValueError; source tables are never modified and rows are never dropped.
 
     Examples
@@ -50,7 +48,8 @@ def plot_statistics(
             f"received {channel!r}. Available columns: {list(table.columns)!r}"
         )
     count = len(table)
-    labels, speeds = _validate_statistics_metadata(count, stats.dlc, stats.wind_speed)
+    if count == 0:
+        raise ValueError("Statistics exploration requires at least one simulation.")
     if len(stats.filename) != count:
         raise ValueError(f"filename must contain one entry per simulation ({count} entries).")
     values = table[channel].tolist()
@@ -60,32 +59,16 @@ def plot_statistics(
                 f"{statistic} for channel {channel!r} at simulation row {row} "
                 "must be a finite numeric value."
             )
-    selected = pd.DataFrame({
-        "simulation_row": range(count), "filename": list(stats.filename),
-        "dlc": labels, "wind_speed": speeds, "value": values,
-    })
     figure = go.Figure()
-    for index, (label, simulations) in enumerate(selected.groupby("dlc", sort=False)):
-        color = qualitative.Plotly[index % len(qualitative.Plotly)]
-        averages = simulations.groupby("wind_speed", sort=True)["value"].agg(["mean", "size"]).reset_index()
-        figure.add_scatter(
-            x=simulations["wind_speed"].tolist(), y=simulations["value"].tolist(),
-            mode="markers", name=f"{label}: simulations", legendgroup=label,
-            marker={"color": color, "opacity": 0.6, "size": 8},
-            customdata=simulations[["simulation_row", "filename", "dlc"]].values.tolist(),
-            hovertemplate="Row: %{customdata[0]}<br>File: %{customdata[1]}"
-            "<br>DLC: %{customdata[2]}<br>Wind speed: %{x} m/s<br>Value: %{y}<extra></extra>",
-        )
-        figure.add_scatter(
-            x=averages["wind_speed"].tolist(), y=averages["mean"].tolist(),
-            mode="lines+markers", name=f"{label}: family average", legendgroup=label,
-            line={"color": color, "width": 2}, marker={"color": color, "size": 10, "symbol": "diamond"},
-            customdata=[[label, int(size)] for size in averages["size"]],
-            hovertemplate="DLC: %{customdata[0]}<br>Wind speed: %{x} m/s"
-            "<br>Family size: %{customdata[1]}<br>Average: %{y}<extra></extra>",
-        )
+    figure.add_scatter(
+        x=list(range(count)), y=values, mode="markers", name="Simulations",
+        marker={"color": "#636EFA", "opacity": 0.7, "size": 8},
+        customdata=[[str(filename)] for filename in stats.filename],
+        hovertemplate="Simulation row: %{x}<br>File: %{customdata[0]}"
+        "<br>Value: %{y}<extra></extra>",
+    )
     figure.update_layout(
-        title=f"{statistic}: {channel}", xaxis_title="Nominal wind speed [m/s]",
+        title=f"{statistic}: {channel}", xaxis_title="Simulation row (zero-based)",
         yaxis_title=f"{statistic}: {channel}", template="plotly_white",
         legend={"groupclick": "toggleitem"},
     )
