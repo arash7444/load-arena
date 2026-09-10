@@ -78,7 +78,29 @@ or second list of simulation files to provide.
 It returns a Plotly Figure and displays it by default, with hover, zoom, and
 legend controls. No channel/statistic dropdowns or application GUI are involved.
 
-The x-axis is the zero-based simulation row in `statistics.filename` order.
+By default, the x-axis is the zero-based simulation row in `statistics.filename` order.
+To use an existing channel for x, select its statistic independently:
+
+```python
+fig = statistics.explore(
+    channel="TowerMy_[kNm]",
+    statistic="max",
+    x_channel="WSPgl._[m/s]",
+    x_statistic="mean",
+    kind="scatter",
+)
+```
+
+Both axes use stored statistics paired by simulation row, even if their DataFrame
+index labels differ. Here x is the measured mean wind speed, not nominal input
+wind speed. `x_statistic` defaults to `"mean"` and accepts the same four statistics
+as y; it is unused when `x_channel` is omitted.
+
+`kind` accepts `"scatter"` (default), `"bar"`, or `"line"`. Lines connect points in
+ascending x order, retaining input order for equal x values. Scatter and bar retain
+simulation order. Equal x values are never aggregated; bars at the same numeric x
+can overlap. Filename hover information stays paired with the original simulation.
+
 Hover over a point to inspect its filename and value. Repeated filenames remain
 separate points, and DataFrame index labels do not affect positional alignment.
 No extra metadata or simulation inputs are required. DLC/wind-speed grouping

@@ -221,3 +221,87 @@ def test_visualization_import_without_ai_credentials():
         env=environment, capture_output=True, text=True, timeout=60,
     )
     assert completed.returncode == 0, completed.stderr
+
+
+@pytest.mark.parametrize("kind", ["scatter", "bar", "line"])
+@pytest.mark.parametrize("x_statistic,offset", [("mean", 0), ("std", 1), ("min", 2), ("max", 3)])
+def test_channel_axes_and_plot_types(stats, kind, x_statistic, offset):
+    """Pair independent statistics positionally and sort only line plots.
+
+    Parameters
+    ----------
+    stats : All_stats
+        Synthetic result fixture.
+    kind : str
+        Plot type under test.
+    x_statistic : str
+        Selected x statistic.
+    offset : int
+        Expected x value offset.
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    >>> # Run: pytest tests/test_statistics_exploration.py -k channel_axes
+    """
+    table = getattr(stats, x_statistic)
+    table["wind_[m/s]"] = [12 + offset, 8 + offset, 8 + offset, 4 + offset]
+    table.index = [40, 10, 90, 20]
+    before = copy.deepcopy(stats)
+    figure = stats.explore(
+        channel="load_[kN]", statistic="max", x_channel="wind_[m/s]",
+        x_statistic=x_statistic, kind=kind, show=False,
+    )
+    trace = figure.data[0]
+    order = [3, 1, 2, 0] if kind == "line" else [0, 1, 2, 3]
+    assert list(trace.x) == [[12 + offset, 8 + offset, 8 + offset, 4 + offset][i] for i in order]
+    assert list(trace.y) == [[23, 5, 9, 103][i] for i in order]
+    assert [row[1] for row in trace.customdata] == order
+    assert [row[0] for row in trace.customdata] == [stats.filename[i] for i in order]
+    assert trace.type == ("bar" if kind == "bar" else "scatter")
+    if kind != "bar":
+        assert trace.mode == ("lines+markers" if kind == "line" else "markers")
+    assert figure.layout.xaxis.title.text == f"{x_statistic}: wind_[m/s]"
+    assert figure.layout.yaxis.title.text == "max: load_[kN]"
+    for name in ("mean", "std", "min", "max"):
+        pd.testing.assert_frame_equal(getattr(stats, name), getattr(before, name))
+
+
+@pytest.mark.parametrize("failure", ["channel", "duplicate", "statistic", "length", "nan", "kind"])
+def test_invalid_x_axis_and_kind(stats, failure):
+    """Reject invalid x selections and mismatched rows without silent alignment.
+
+    Parameters
+    ----------
+    stats : All_stats
+        Synthetic result fixture.
+    failure : str
+        Invalid input scenario.
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    >>> # Run: pytest tests/test_statistics_exploration.py -k invalid_x
+    """
+    kwargs = dict(channel="load_[kN]", statistic="max", x_channel="load_[kN]", show=False)
+    if failure == "channel":
+        kwargs["x_channel"] = "missing"
+    elif failure == "duplicate":
+        stats.mean = pd.concat([stats.mean, stats.mean], axis=1)
+    elif failure == "statistic":
+        kwargs["x_statistic"] = "median"
+    elif failure == "length":
+        stats.mean = stats.mean.iloc[:-1]
+    elif failure == "nan":
+        stats.mean = stats.mean.astype(float)
+        stats.mean.iloc[1, 0] = float("nan")
+    else:
+        kwargs["kind"] = "pie"
+    with pytest.raises(ValueError):
+        stats.explore(**kwargs)

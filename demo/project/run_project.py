@@ -42,8 +42,16 @@ def main() -> None:
 
 
 
-    statistics.explore(channel="Aerot._[kW]", statistic="mean")
+    # statistics.explore(channel="Aerot._[kW]", statistic="mean")
 
+
+    statistics.explore(
+        channel="Aerot._[kW]",
+        statistic="max",
+        x_channel="WSPgl._[m/s]",
+        x_statistic="mean",
+        kind="scatter",
+    )
     input("Press enter to exit")
 
 

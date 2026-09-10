@@ -34,6 +34,9 @@ class All_stats:
 
     def explore(
         self, *, channel: str, statistic: Literal["mean", "std", "min", "max"],
+        x_channel: str | None = None,
+        x_statistic: Literal["mean", "std", "min", "max"] = "mean",
+        kind: Literal["scatter", "bar", "line"] = "scatter",
         show: bool = True,
     ) -> "Figure":
         """Plot stored per-simulation statistics without additional metadata.
@@ -44,13 +47,19 @@ class All_stats:
             Exact channel column name, including units.
         statistic : {"mean", "std", "min", "max"}
             Raw per-simulation statistic to explore.
+        x_channel : str or None, default None
+            Exact x-axis channel name; None uses simulation row positions.
+        x_statistic : {"mean", "std", "min", "max"}, default "mean"
+            Raw statistic for x_channel; unused when x_channel is None.
+        kind : {"scatter", "bar", "line"}, default "scatter"
+            Plot type for individual values; lines connect in ascending x order.
         show : bool, default True
             Display using Plotly's configured renderer.
 
         Returns
         -------
         plotly.graph_objects.Figure
-            Interactive statistics figure using simulation row positions.
+            Interactive statistics figure with positional simulation pairing.
 
         Examples
         --------
@@ -58,7 +67,10 @@ class All_stats:
         """
         from load_arena.visualization.statistics_plots import plot_statistics
 
-        figure = plot_statistics(self, channel=channel, statistic=statistic)
+        figure = plot_statistics(
+            self, channel=channel, statistic=statistic,
+            x_channel=x_channel, x_statistic=x_statistic, kind=kind,
+        )
         if show:
             figure.show()
         return figure
