@@ -28,6 +28,7 @@ def fls_inputs(monkeypatch):
         reader = Mock()
         reader.ReadAll.return_value = sample
         reader.ChInfo = None
+        reader.t = sample["time"].to_numpy()
         readers.append(reader)
     monkeypatch.setattr("load_arena.process.fls.ReadHawc2", Mock(side_effect=readers))
     monkeypatch.setattr("load_arena.process.fls.toDataFrame", lambda data, info: data)
@@ -46,22 +47,23 @@ def test_multi_channel_multi_exponent_weighting(fls_inputs, method):
     """
     cases, samples = fls_inputs
     result = calc_fls(cases, [4, 6, 8, 10, 12], 100, method, channels=["load", "other"])
-    assert len(result.per_case) == 3 * 2 * 5
-    assert len(result.campaign) == 2 * 5
-    assert set(result.per_case.channel) == {"load", "other"}
-    assert set(result.per_case.case_row) == {2, 3, 4}
+    assert list(result.channels) == ["load", "other"]
     assert result.n_ref == 100
     assert result.method == method
-    for row in result.campaign.itertuples():
-        exponent = row.wohler_exponent
-        values = [calc_del(sample[row.channel], exponent, 100, method=method) for sample in samples]
-        expected = (2 * values[0] ** exponent + 5 * values[1] ** exponent) ** (1 / exponent)
-        assert row.DEL == pytest.approx(expected)
+    for name, channel in result.channels.items():
+        assert len(channel.files) == 3
+        assert channel.files.case_row.tolist() == [2, 3, 4]
+        assert len(channel.campaign) == 5
+        for row in channel.campaign.itertuples():
+            exponent = row.wohler_exponent
+            values = [calc_del(sample[name], exponent, 100, method=method) for sample in samples]
+            expected = (2 * values[0] ** exponent + 5 * values[1] ** exponent) ** (1 / exponent)
+            assert row.DEL == pytest.approx(expected)
+            assert channel.files[f"DEL_m{int(exponent)}"].tolist() == pytest.approx(values)
     if method == "astm":
-        # Turning points 0, 2, -2, 0 leave half cycles of ranges 2, 4, 2.
         for exponent in (4, 6, 8, 10, 12):
-            row = result.per_case.query("case_row == 2 and channel == 'load' and wohler_exponent == @exponent")
-            assert row.DEL.iloc[0] == pytest.approx(((2**exponent + 0.5 * 4**exponent) / 100) ** (1 / exponent))
+            assert result.channels["load"].files[f"DEL_m{exponent}"].iloc[0] == pytest.approx(
+                ((2**exponent + 0.5 * 4**exponent) / 100) ** (1 / exponent))
 
 
 def test_duplicate_exponents_do_not_double_weight(fls_inputs):
@@ -73,10 +75,10 @@ def test_duplicate_exponents_do_not_double_weight(fls_inputs):
     """
     cases, samples = fls_inputs
     result = calc_fls(cases, [4, 4], 100, "astm", channels=["load", "other"])
-    assert len(result.campaign) == 2
+    assert all(len(ch.campaign) == 1 for ch in result.channels.values())
     expected = (2 * calc_del(samples[0]["load"], 4, 100, "astm")**4 +
                 5 * calc_del(samples[1]["load"], 4, 100, "astm")**4)**0.25
-    assert result.campaign.query("channel == 'load'").DEL.iloc[0] == pytest.approx(expected)
+    assert result.channels["load"].campaign.DEL.iloc[0] == pytest.approx(expected)
 
 
 def test_zero_occurrences(fls_inputs):
@@ -89,8 +91,8 @@ def test_zero_occurrences(fls_inputs):
     cases, _ = fls_inputs
     cases["Occurrences"] = 0
     result = calc_fls(cases, [4, 10], 100, "astm", channels=["load", "other"])
-    assert (result.campaign.DEL == 0).all()
-    assert (result.per_case.DEL > 0).any()
+    assert all((ch.campaign.DEL == 0).all() for ch in result.channels.values())
+    assert (result.channels["load"].files.DEL_m4 > 0).any()
 
 
 def test_constant_channels_preserve_warning(fls_inputs):
@@ -105,10 +107,12 @@ def test_constant_channels_preserve_warning(fls_inputs):
         sample["load"] = 1.0
     with pytest.warns(RuntimeWarning, match="no variation"):
         result = calc_fls(cases, [4, 10], 100, "astm", channels=["load", "other"])
-    assert (result.campaign.query("channel == 'load'").DEL == 0).all()
+    assert (result.channels["load"].campaign.DEL == 0).all()
+    assert (result.channels["load"].files.filter(like="DEL_1Hz").to_numpy() == 0).all()
+    assert all(result.channels["load"].rainflow_results[row].cycles.empty for row in (2, 3, 4))
 
 
-def test_invalid_signal_has_case_channel_exponent_context(fls_inputs):
+def test_invalid_signal_has_case_channel_context(fls_inputs):
     """Reject invalid numeric signals with actionable source context.
 
     Parameters: fls_inputs supplies a signal that can be corrupted.
@@ -117,7 +121,7 @@ def test_invalid_signal_has_case_channel_exponent_context(fls_inputs):
     """
     cases, samples = fls_inputs
     samples[0].loc[1, "load"] = np.nan
-    with pytest.raises(ValueError, match="CSV row 2.*channel load.*wohler_exponent 4"):
+    with pytest.raises(ValueError, match="CSV row 2.*channel load"):
         calc_fls(cases, [4], 100, "astm", channels=["load", "other"])
 
 
@@ -158,4 +162,85 @@ def test_selected_channel_order(fls_inputs):
     """
     cases, _ = fls_inputs
     result = calc_fls(cases, [4], 100, "astm", channels=["other", "time", "load"])
-    assert result.campaign.channel.tolist() == ["other", "time", "load"]
+    assert list(result.channels) == ["other", "time", "load"]
+
+
+@pytest.mark.parametrize("method", ["astm", "windap"])
+def test_retained_rainflow_reused_for_both_references(fls_inputs, monkeypatch, method):
+    """Retain one counting result per case/channel for every DEL reference.
+
+    Parameters: fls_inputs supplies samples; monkeypatch spies on counting; method selects algorithm.
+    Returns: None; cycle data, counts, durations, and reference DELs are verified.
+    Examples: pytest tests/test_fls.py -k retained_rainflow
+    """
+    from load_arena.process.calculate_rainflow import calculate_rainflow
+    cases, samples = fls_inputs
+    cases["Timeseries"] = "repeated.int"
+    readers = []
+    for index, sample in enumerate(samples):
+        reader = Mock()
+        reader.ReadAll.return_value = sample
+        reader.t = 100 + np.arange(len(sample)) * (index + 1)
+        readers.append(reader)
+    monkeypatch.setattr("load_arena.process.fls.ReadHawc2", Mock(side_effect=readers))
+    counting = Mock(wraps=calculate_rainflow)
+    monkeypatch.setattr("load_arena.process.fls.calculate_rainflow", counting)
+    result = calc_fls(cases, [4, 6, 4], 100, method, channels=["load", "other"])
+    assert counting.call_count == 6
+    assert len({id(value) for ch in result.channels.values() for value in ch.rainflow_results.values()}) == 6
+    for name, channel in result.channels.items():
+        assert list(channel.rainflow_results) == [2, 3, 4]
+        assert channel.files.columns.tolist() == [
+            "case_row", "filename", "occurrences", "duration_s",
+            "DEL_m4", "DEL_1Hz_m4", "DEL_m6", "DEL_1Hz_m6",
+        ]
+        assert channel.files.filename.nunique() == 1
+        for case_row, retained in channel.rainflow_results.items():
+            expected = calculate_rainflow(samples[case_row - 2][name], method=method)
+            pd.testing.assert_frame_equal(retained.cycles, expected.cycles)
+            assert (retained.method, retained.levels, retained.threshold) == (expected.method, expected.levels, expected.threshold)
+        for row in channel.files.itertuples():
+            assert row.duration_s == 4 * (row.case_row - 1)
+            for exponent in (4, 6):
+                value = getattr(row, f"DEL_m{exponent}")
+                assert value == pytest.approx(calc_del(samples[row.case_row - 2][name], exponent, 100, method))
+                assert getattr(row, f"DEL_1Hz_m{exponent}") == pytest.approx(value * (100 / row.duration_s) ** (1 / exponent))
+    assert all(reader.ReadAll.call_count == 1 for reader in readers)
+
+
+@pytest.mark.parametrize("timestamps", [None, [], [1], [1, 1], [2, 1], [0, np.nan],
+                                       [0, np.inf], [[0, 1]], ["bad", "time"], [-1e308, 1e308]])
+def test_invalid_reader_timestamps(fls_inputs, monkeypatch, timestamps):
+    """Reject invalid time vectors with case and file context before counting.
+
+    Parameters: fls_inputs supplies cases; monkeypatch replaces reader; timestamps supplies invalid input.
+    Returns: None; invalid duration raises an actionable error and counting is skipped.
+    Examples: pytest tests/test_fls.py -k invalid_reader
+    """
+    cases, samples = fls_inputs
+    reader = Mock()
+    reader.ReadAll.return_value = samples[0]
+    reader.t = timestamps
+    monkeypatch.setattr("load_arena.process.fls.ReadHawc2", Mock(return_value=reader))
+    counting = Mock()
+    monkeypatch.setattr("load_arena.process.fls.calculate_rainflow", counting)
+    with pytest.raises(ValueError, match="CSV row 2.*simulation .*a.*[Tt]imestamp"):
+        calc_fls(cases, [4], 100, channels=["load"])
+    counting.assert_not_called()
+
+
+def test_exponent_labels_and_new_api(fls_inputs):
+    """Preserve precise exponent labels and expose only channel-based results.
+
+    Parameters: fls_inputs supplies cases and sample readers.
+    Returns: None; labels are ordered, distinct, and old fields are absent.
+    Examples: pytest tests/test_fls.py -k exponent_labels
+    """
+    cases, _ = fls_inputs
+    result = calc_fls(cases, [6, 4.000000000000001, 4, 2.5, 6], 100, "astm", channels=["load"])
+    assert result.channels["load"].files.columns.tolist()[4:] == [
+        "DEL_m6", "DEL_1Hz_m6", "DEL_m4.000000000000001", "DEL_1Hz_m4.000000000000001",
+        "DEL_m4", "DEL_1Hz_m4", "DEL_m2.5", "DEL_1Hz_m2.5",
+    ]
+    for name in ("per_case", "campaign", "rainflow_results"):
+        assert not hasattr(result, name)

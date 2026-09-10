@@ -49,6 +49,36 @@ def calc_del(
     >>> calc_del(signal, wohler_exponent=4, n_ref=600, method="astm")
     2.0
     """
+    _validate_del_parameters(wohler_exponent, n_ref)
+
+    cycles = calculate_rainflow(
+        signal,
+        method=method,
+        levels=levels,
+        threshold=threshold,
+    )
+    return calc_del_from_rainflow(cycles, wohler_exponent, n_ref)
+
+
+def _validate_del_parameters(wohler_exponent: float, n_ref: float) -> None:
+    """Validate the exponent and reference count before counting or reducing cycles.
+
+    Parameters
+    ----------
+    wohler_exponent : float
+        Positive finite damage exponent.
+    n_ref : float
+        Positive finite reference cycle count.
+
+    Returns
+    -------
+    None
+        Invalid types or values raise TypeError or ValueError.
+
+    Examples
+    --------
+    >>> _validate_del_parameters(4, 600)
+    """
     if isinstance(wohler_exponent, (bool, np.bool_)) or not isinstance(
         wohler_exponent, (int, float, np.integer, np.floating)
     ):
@@ -62,21 +92,42 @@ def calc_del(
     if not np.isfinite(n_ref) or n_ref <= 0:
         raise ValueError("n_ref must be a positive finite number.")
 
-    cycles = calculate_rainflow(
-        signal,
-        method=method,
-        levels=levels,
-        threshold=threshold,
-    )
-    if cycles.cycles.empty:
-        return 0.0
 
-    ranges = cycles.range.to_numpy(dtype=float)
-    counts = cycles.count.to_numpy(dtype=float)
-    damage_sum = np.sum(counts * ranges**float(wohler_exponent)) # Damage integral for all ranges
-    del_val = float((damage_sum / float(n_ref)) ** (1.0 / float(wohler_exponent))) # Damage equivalent load
-    
-    return del_val
+def calc_del_from_rainflow(
+    result: RainflowResult,
+    wohler_exponent: float,
+    n_ref: float,
+) -> float:
+    """Calculate a damage-equivalent load from previously counted rainflow cycles.
+
+    Parameters
+    ----------
+    result : RainflowResult
+        Counted cycles with range and count columns; the result is not modified.
+    wohler_exponent : float
+        Positive finite damage exponent.
+    n_ref : float
+        Positive finite reference cycle count.
+
+    Returns
+    -------
+    float
+        Damage-equivalent load, or zero when the result has no cycles.
+
+    Examples
+    --------
+    >>> cycles = calculate_rainflow(np.array([0., 2., 0.]), method="astm")
+    >>> calc_del_from_rainflow(cycles, 4, 1)
+    2.0
+    """
+    _validate_del_parameters(wohler_exponent, n_ref)
+    if result.cycles.empty:
+        return 0.0
+    ranges = result.range.to_numpy(dtype=float)
+    counts = result.count.to_numpy(dtype=float)
+    damage_sum = np.sum(counts * ranges**float(wohler_exponent))
+    return float((damage_sum / float(n_ref)) ** (1.0 / float(wohler_exponent)))
+
 
 @dataclass
 class DamageRangeSpectrum:

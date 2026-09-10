@@ -95,6 +95,9 @@ uls = project.run_uls()
 fls = project.run_fls()
 ```
 
+For examples of selecting channels, files, families, DELs, and stored rainflow
+cycles, see the [result access guide](docs/results_access.md).
+
 Run the portable example with `uv run python demo/project/run_project.py`.
 Its PLFs, occurrences, reference count, and WÃ¶hler exponents are illustrative,
 not a validated engineering campaign.
@@ -124,8 +127,31 @@ not a validated engineering campaign.
   channel and exponent `m`, campaign DEL is
   `(sum(Occurrences * case_DEL**m))**(1/m)`, using the same `n_ref` for all cases.
   No duration, probability, or lifetime normalization is inferred.
-- `FLSResult.per_case` and `.campaign` identify both `channel` and
-  `wohler_exponent`. The result also retains `n_ref` and `method`.
+- FLS results are organized by channel:
+  `channel = result.channels["TowerMy_[kNm]"]`. Each channel contains:
+  `channel.files` (one row per input case), `channel.rainflow_results[case_row]`
+  (complete unbinned cycles), and `channel.campaign` (Wöhler exponent and DEL).
+  Shared parameters remain `result.n_ref` and `result.method`. The old flat
+  `per_case`, `campaign`, and `rainflow_results` fields have been removed.
+- Each channel's file table contains `case_row`, `filename`, `occurrences`, and
+  `duration_s`, then pairs such as `DEL_m4`, `DEL_1Hz_m4`, `DEL_m10`, `DEL_1Hz_m10`
+  in configured exponent order. Fractional exponents retain their shortest
+  round-trip float spelling. CSV row numbers distinguish repeated filenames.
+- `duration_s` spans the first and last reader timestamps and supplies the
+  reference count for 1 Hz DEL. Timestamps must be finite, strictly increasing,
+  and contain at least two values; time need not be a selected channel.
+- FLS writes one safely named channel CSV with the file table plus `n_ref` and
+  `method`. Combined `campaign.csv` retains its existing summary schema. Channel
+  filenames follow ULS sanitization and collision rules, reserving `campaign`
+  and `per_case`. Existing output files are retained: an old `per_case.csv` is
+  obsolete and is no longer updated.
+- Rainflow counting runs once per case/channel; full ranges, means, counts, and
+  counting parameters stay in memory and are reused for all exponents and both
+  DEL references. These results support later spectra, damage contribution
+  plots, and Markov matrices; rainflow data is not exported to CSV.
+- `calc_del_from_rainflow(result, wohler_exponent, n_ref)` calculates DEL from a
+  retained rainflow result without recounting cycles. Existing `calc_del()` calls
+  and campaign occurrence weighting remain unchanged.
 - ULS exports `uls/global.csv` with one row per channel and a separate CSV per
   channel with independent Max, Min, and signed AbsMax family rankings. See
   [ULS calculation and output schemas](docs/features/plf_uls_calculation_plan.md).

@@ -1,5 +1,9 @@
 # Load Arena project configuration and Python API
 
+> Historical design document: some API and channel-selection details below have
+> since changed. Use the [current result access examples](../results_access.md)
+> for statistics, ULS, and channel-based FLS results.
+
 ## Summary
 
 Introduce a small project layer that validates YAML, resolves paths, and orchestrates existing analysis functions. Keep case definitions in CSV files and engineering calculations in `process`.

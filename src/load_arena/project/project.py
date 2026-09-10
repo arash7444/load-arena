@@ -16,6 +16,42 @@ from load_arena.project.config import (
 from load_arena.utils.find_files import find_files
 
 
+def _channel_filename(channel: str, used_names: set[str]) -> str:
+    """Allocate a safe channel filename stem using case-insensitive uniqueness.
+
+    Parameters
+    ----------
+    channel : str
+        Original reader channel name.
+    used_names : set[str]
+        Reserved or allocated case-folded stems; updated with the allocated name.
+
+    Returns
+    -------
+    str
+        Windows-safe filename stem with a deterministic collision suffix.
+
+    Examples
+    --------
+    >>> _channel_filename("CON", set())
+    '_CON'
+    """
+    stem = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", channel).rstrip(" .") or "channel"
+    if stem.split(".")[0].upper() in {
+        "CON", "PRN", "AUX", "NUL",
+        *(f"COM{i}" for i in range(1, 10)),
+        *(f"LPT{i}" for i in range(1, 10)),
+    }:
+        stem = f"_{stem}"
+    name = stem
+    suffix = 2
+    while name.casefold() in used_names:
+        name = f"{stem}__{suffix}"
+        suffix += 1
+    used_names.add(name.casefold())
+    return name
+
+
 @dataclass
 class LoadArenaProject:
     """One turbine/model campaign with independent, explicitly invoked analyses."""
@@ -172,19 +208,7 @@ class LoadArenaProject:
                 ranked[f"{label} Family"] = families["Family"].tolist()
                 ranked[f"{label} filename"] = families[f"{key}_filename"].tolist()
 
-            stem = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", channel).rstrip(" .") or "channel"
-            if stem.split(".")[0].upper() in {
-                "CON", "PRN", "AUX", "NUL",
-                *(f"COM{i}" for i in range(1, 10)),
-                *(f"LPT{i}" for i in range(1, 10)),
-            }:
-                stem = f"_{stem}"
-            name = stem
-            suffix = 2
-            while name.casefold() in used_names:
-                name = f"{stem}__{suffix}"
-                suffix += 1
-            used_names.add(name.casefold())
+            name = _channel_filename(channel, used_names)
             tables[name] = pd.DataFrame(ranked)
         tables = {"global": pd.DataFrame(global_rows), **tables}
         self._write_tables("uls", tables)
@@ -212,7 +236,17 @@ class LoadArenaProject:
         settings = self.config.analysis.fls
         result = calc_fls(cases, settings.wohler_exponents, settings.n_ref, settings.method,
                           channels=settings.channels)
-        tables = {name: getattr(result, name).assign(n_ref=result.n_ref, method=result.method)
-                  for name in ("per_case", "campaign")}
+        tables = {}
+        summaries = []
+        used_names = {"campaign", "per_case"}
+        for channel, channel_result in result.channels.items():
+            name = _channel_filename(channel, used_names)
+            tables[name] = channel_result.files.assign(n_ref=result.n_ref, method=result.method)
+            summary = channel_result.campaign.copy()
+            summary.insert(0, "channel", channel)
+            summaries.append(summary)
+        tables["campaign"] = pd.concat(summaries, ignore_index=True).assign(
+            n_ref=result.n_ref, method=result.method,
+        )
         self._write_tables("fls", tables)
         return result

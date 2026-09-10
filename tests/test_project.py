@@ -315,12 +315,14 @@ def test_runs_recheck_cases_and_output_errors(project_files, monkeypatch):
     Returns: None; fresh validation and contextual output errors are asserted.
     Examples: pytest tests/test_project.py -k recheck
     """
-    from load_arena.process.fls import FLSResult
+    from load_arena.process.fls import FLSResult, FLSChannelResult
 
     path, _ = project_files
     project = LoadArenaProject.from_yaml(path)
-    result = FLSResult(pd.DataFrame({"channel": ["Time"], "wohler_exponent": [4], "DEL": [1]}),
-                       pd.DataFrame({"channel": ["Time"], "wohler_exponent": [4], "DEL": [2]}), 100, "astm")
+    result = FLSResult({"Time": FLSChannelResult(
+        pd.DataFrame({"case_row": [2], "filename": ["a.int"], "DEL_m4": [1]}), {},
+        pd.DataFrame({"wohler_exponent": [4], "DEL": [2]}),
+    )}, 100, "astm")
     monkeypatch.setattr("load_arena.project.project.calc_fls", Mock(return_value=result))
     project.run_fls()
     directory = project.config.output.directory / "fls"
@@ -433,6 +435,7 @@ def test_project_selection_and_missing_channel_in_later_file(project_files, monk
                             "Ignored": [float("nan")] * 5})
     reader = Mock()
     reader.ReadAll.return_value = samples
+    reader.t = samples["Time_[s]"].to_numpy()
     monkeypatch.setattr(module, "ReadHawc2", Mock(return_value=reader))
     conversion = Mock(side_effect=[samples, samples])
     monkeypatch.setattr(module, "toDataFrame", conversion)
@@ -443,7 +446,12 @@ def test_project_selection_and_missing_channel_in_later_file(project_files, monk
             for suffix in ("", "_filename")
         ]
     else:
-        assert result.campaign.channel.unique().tolist() == ["Load_[kN]"]
+        assert list(result.channels) == ["Load_[kN]"]
+        saved = pd.read_csv(project.config.output.directory / "fls/Load_[kN].csv")
+        assert saved.duration_s.tolist() == result.channels["Load_[kN]"].files.duration_s.tolist()
+        assert saved.DEL_1Hz_m4.tolist() == pytest.approx(result.channels["Load_[kN]"].files.DEL_1Hz_m4.tolist())
+        campaign = pd.read_csv(project.config.output.directory / "fls/campaign.csv")
+        assert campaign.columns.tolist() == ["channel", "wohler_exponent", "DEL", "n_ref", "method"]
     conversion.side_effect = [samples, samples.drop(columns="Load_[kN]")]
     with pytest.raises(ValueError, match=r"b.res.*Load_\[kN\]"):
         getattr(project, f"run_{mode}")()
@@ -469,13 +477,14 @@ def test_all_channels_yaml_and_processing(project_files, monkeypatch, mode):
                             "Other": [1., 3., 1., -3., 1.]})
     reader = Mock()
     reader.ReadAll.return_value = samples
+    reader.t = samples["Time_[s]"].to_numpy()
     monkeypatch.setattr(module, "ReadHawc2", Mock(return_value=reader))
     monkeypatch.setattr(module, "toDataFrame", Mock(return_value=samples))
     result = getattr(project, f"run_{mode}")()
     if mode == "uls":
         assert result.ULS.columns[::6].tolist() == [f"max_{name}" for name in samples.columns]
     else:
-        assert result.campaign.channel.unique().tolist() == samples.columns.tolist()
+        assert list(result.channels) == samples.columns.tolist()
 
 
 def test_all_in_channel_list_is_literal(project_files):
@@ -489,3 +498,36 @@ def test_all_in_channel_list_is_literal(project_files):
     document["analysis"]["uls"]["channels"] = ["all"]
     path.write_text(yaml.safe_dump(document), encoding="utf-8")
     assert LoadArenaProject.from_yaml(path).config.analysis.uls.channels == ["all"]
+
+
+def test_fls_channel_export_names_and_preserved_files(project_files, monkeypatch):
+    """Export wide channel tables safely and retain obsolete or unrelated files.
+
+    Parameters: project_files supplies output settings; monkeypatch supplies channel results.
+    Returns: None; filenames, schemas, and campaign ordering are verified.
+    Examples: pytest tests/test_project.py -k fls_channel_export
+    """
+    from load_arena.process.fls import FLSResult, FLSChannelResult
+    path, _ = project_files
+    project = LoadArenaProject.from_yaml(path)
+    names = ["WSPgl._[m/s]", "WSPgl._[m_s]", "campaign", "PER_CASE", "CON", "NUL.txt"]
+    files = pd.DataFrame({"case_row": [2], "filename": ["a.int"], "occurrences": [2.],
+                          "duration_s": [4.], "DEL_m4": [1.], "DEL_1Hz_m4": [2.]})
+    channels = {name: FLSChannelResult(files.copy(), {}, pd.DataFrame({"wohler_exponent": [4.], "DEL": [3.]}))
+                for name in names}
+    result = FLSResult(channels, 100, "astm")
+    monkeypatch.setattr("load_arena.project.project.calc_fls", Mock(return_value=result))
+    output = project.config.output.directory / "fls"
+    output.mkdir(parents=True)
+    (output / "per_case.csv").write_text("obsolete", encoding="utf-8")
+    (output / "keep.txt").write_text("keep", encoding="utf-8")
+    for _ in range(2):
+        assert project.run_fls() is result
+        for stem in ["WSPgl._[m_s]", "WSPgl._[m_s]__2", "campaign__2", "PER_CASE__2", "_CON", "_NUL.txt"]:
+            saved = pd.read_csv(output / f"{stem}.csv")
+            pd.testing.assert_frame_equal(saved, files.assign(n_ref=100, method="astm"))
+        summary = pd.read_csv(output / "campaign.csv")
+        assert summary.channel.tolist() == names
+        assert summary.columns.tolist() == ["channel", "wohler_exponent", "DEL", "n_ref", "method"]
+    assert (output / "per_case.csv").read_text() == "obsolete"
+    assert (output / "keep.txt").read_text() == "keep"

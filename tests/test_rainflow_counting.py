@@ -304,3 +304,43 @@ def test_calc_del_validates_damage_parameters(
     """
     with pytest.raises(exception_type):
         calc_del(np.array([0.0, 1.0, 0.0]), wohler_exponent, n_ref)
+
+
+@pytest.mark.parametrize("method", ["astm", "windap"])
+def test_del_from_retained_cycles(method, monkeypatch):
+    """Reduce retained cycles without recounting or changing their data.
+
+    Parameters: method selects counting; monkeypatch prevents further counting.
+    Returns: None; both reference reductions match independently summed damage.
+    Examples: pytest tests/test_rainflow_counting.py -k retained_cycles
+    """
+    from importlib import import_module
+    from load_arena.process import calc_del_from_rainflow
+    result = calculate_rainflow(np.array([0., 2., 0., -2., 0.]), method=method)
+    original = result.cycles.copy(deep=True)
+    module = import_module("load_arena.process.calc_del")
+    from unittest.mock import Mock
+    counting = Mock(side_effect=AssertionError("must not recount"))
+    monkeypatch.setattr(module, "calculate_rainflow", counting)
+    for exponent in (4, 10):
+        damage = sum(row.count * row.range**exponent for row in original.itertuples())
+        for reference in (4, 100):
+            assert calc_del_from_rainflow(result, exponent, reference) == pytest.approx((damage / reference)**(1 / exponent))
+    pd.testing.assert_frame_equal(result.cycles, original)
+    counting.assert_not_called()
+
+
+@pytest.mark.parametrize("exponent,reference,error", [(True, 100, TypeError), (4, True, TypeError),
+    (0, 100, ValueError), (4, 0, ValueError), (np.inf, 100, ValueError), (4, np.nan, ValueError)])
+def test_del_from_rainflow_validates_empty_results(exponent, reference, error):
+    """Validate DEL parameters even when retained cycles are empty.
+
+    Parameters: exponent and reference specify invalid parameters; error specifies expected exception.
+    Returns: None; cycle-free results do not bypass numeric parameter validation.
+    Examples: pytest tests/test_rainflow_counting.py -k validates_empty
+    """
+    from load_arena.process import calc_del_from_rainflow
+    result = RainflowResult(pd.DataFrame(columns=["range", "mean", "count"]), "astm")
+    assert calc_del_from_rainflow(result, 4, 100) == 0
+    with pytest.raises(error):
+        calc_del_from_rainflow(result, exponent, reference)

@@ -28,8 +28,16 @@ def main() -> None:
     fls = project.run_fls()
     print(f"Statistics: {len(statistics.filename)} simulations")
     print(uls.ULS)
-    print(fls.campaign)
+    for name, channel in fls.channels.items():
+        print(name)
+        print(channel.files)
+        print(channel.campaign)
     print(f"CSV outputs: {project.config.output.directory}")
+    # example:
+    ch_tmp = fls.channels["Time_[s]"]
+    ch_tmp.files
+    ch_tmp.rainflow_results
+    ch_tmp.campaign
 
 
 if __name__ == "__main__":
