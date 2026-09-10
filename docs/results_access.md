@@ -59,6 +59,59 @@ The object also has `mean_plf`, `std_plf`, `min_plf`, and `max_plf`. Standalone
 It does not apply the ULS case CSV's PLFs. Its `family` list contains placeholder
 values because standalone statistics discovers files rather than loading families.
 
+## Explore statistics interactively
+
+Calculate statistics with explicit DLC and nominal wind-speed metadata:
+
+```python
+from load_arena import calculate_statistics
+
+stats = calculate_statistics(
+    files=["results/dlc12_seed1.int", "results/dlc12_seed2.int", "results/dlc13_seed1.int"],
+    dlc=["DLC12", "DLC12", "DLC13"],
+    wind_speed=[8.0, 8.0, 8.0],
+)
+print(stats.mean.columns.tolist())
+fig = stats.explore(channel="Aerot._[kW]", statistic="mean")
+# Suppress display when building a figure for later use:
+fig = stats.explore(channel="Aerot._[kW]", statistic="max", show=False)
+```
+
+Replace example paths and channel names with your simulation paths and exact reader
+channel names. `calculate_statistics()` retains file order and repeated paths,
+copies metadata, and returns the existing `All_stats` type without exporting CSVs.
+Its optional `channels` argument accepts a list of channel names or `"all"`;
+the default `None` retains all channels.
+
+`explore()` requires one channel and one of `mean`, `std`, `min`, or `max`.
+It returns a Plotly Figure and displays it by default, with hover, zoom, and
+legend controls. No channel/statistic dropdowns or application GUI are involved.
+
+Supply one nonblank DLC string and one finite, nonnegative nominal wind speed
+in m/s per simulation row. Metadata is positional, independent of DataFrame index
+labels. A family is the exact `(dlc, wind_speed)` pair: different DLCs never share
+an average. The chart shows individual values and an equally weighted arithmetic
+average per family, with separate colors and average lines for each DLC. Selecting
+`max`, for example, averages simulation maxima; it does not select their maximum.
+PLFs and ULS family aggregation methods are not used. Speeds are not inferred,
+rounded, or binned. Invalid metadata or nonfinite selected values raise `ValueError`
+without silently dropping rows.
+
+Existing calculation entry points remain usable. Attach metadata in the order of
+`filename` before exploring an existing result:
+
+```python
+statistics = project.run_statistics()
+print(statistics.filename)  # Establish the required metadata order.
+# Supply your complete lists, one entry for each filename:
+statistics.dlc = dlc_labels
+statistics.wind_speed = nominal_wind_speeds
+fig = statistics.explore(channel="Aerot._[kW]", statistic="std")
+```
+
+Exploration uses stored raw statistics; it neither rereads simulations nor changes
+the result tables. Existing `.mean`, `.std`, `.min`, and `.max` access is unchanged.
+
 ## ULS: global extremes and family results
 
 `uls.ULS` is a one-row global table. `uls.Family_ULS` contains one row per family.

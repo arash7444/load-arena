@@ -1,6 +1,12 @@
 import pandas as pd
 from dataclasses import dataclass
 from pathlib import Path
+from math import isfinite
+from numbers import Real
+from typing import TYPE_CHECKING, Literal
+
+if TYPE_CHECKING:
+    from plotly.graph_objects import Figure
 from load_arena.data_reader import LoadArenaConfig
 from load_arena.data_reader import ReadHawc2
 from load_arena.data_reader import toDataFrame
@@ -27,6 +33,117 @@ class All_stats:
     max_plf: pd.DataFrame
     filename: list[str]
     family: list[str]
+    dlc: list[str] | None = None
+    wind_speed: list[float] | None = None
+
+    def explore(
+        self, *, channel: str, statistic: Literal["mean", "std", "min", "max"],
+        show: bool = True,
+    ) -> "Figure":
+        """Plot simulation statistics and averages by DLC and nominal wind speed.
+
+        Parameters
+        ----------
+        channel : str
+            Exact channel column name, including units.
+        statistic : {"mean", "std", "min", "max"}
+            Raw per-simulation statistic to explore.
+        show : bool, default True
+            Display using Plotly's configured renderer.
+
+        Returns
+        -------
+        plotly.graph_objects.Figure
+            Interactive simulation and family-average traces.
+
+        Examples
+        --------
+        >>> fig = stats.explore(channel="Aerot._[kW]", statistic="mean", show=False)
+        """
+        from load_arena.visualization.statistics_plots import plot_statistics
+
+        figure = plot_statistics(self, channel=channel, statistic=statistic)
+        if show:
+            figure.show()
+        return figure
+
+
+def _validate_statistics_metadata(
+    count: int, dlc: list[str] | None, wind_speed: list[float] | None,
+) -> tuple[list[str], list[float]]:
+    """Validate and copy positional DLC and nominal wind-speed metadata.
+
+    Parameters
+    ----------
+    count : int
+        Number of simulation rows, which must be positive.
+    dlc : list[str] or None
+        One nonblank DLC label per simulation.
+    wind_speed : list[float] or None
+        One finite, nonnegative nominal wind speed in m/s per simulation.
+
+    Returns
+    -------
+    tuple[list[str], list[float]]
+        Independent metadata lists; invalid input raises ValueError.
+
+    Examples
+    --------
+    >>> _validate_statistics_metadata(1, ["DLC12"], [8])
+    (['DLC12'], [8.0])
+    """
+    if count == 0:
+        raise ValueError("Statistics exploration requires at least one simulation.")
+    for name, values in (("dlc", dlc), ("wind_speed", wind_speed)):
+        if not isinstance(values, list) or len(values) != count:
+            raise ValueError(
+                f"{name} must be a list with one value per simulation ({count} values); "
+                f"supply it to calculate_statistics() or assign stats.{name}."
+            )
+    for row, label in enumerate(dlc):
+        if not isinstance(label, str) or not label.strip():
+            raise ValueError(f"dlc at simulation row {row} must be a nonblank string.")
+    for row, speed in enumerate(wind_speed):
+        if isinstance(speed, bool) or not isinstance(speed, Real) or not isfinite(speed) or speed < 0:
+            raise ValueError(
+                f"wind_speed at simulation row {row} must be a finite, nonnegative number in m/s."
+            )
+    return list(dlc), [float(speed) for speed in wind_speed]
+
+
+def calculate_statistics(
+    files: list[str | Path], *, dlc: list[str], wind_speed: list[float],
+    channels: ChannelSelection | None = None,
+) -> All_stats:
+    """Calculate statistics with explicit metadata for result exploration.
+
+    Parameters
+    ----------
+    files : list[str or pathlib.Path]
+        Simulation paths in the desired result order; repeated paths are retained.
+    dlc : list[str]
+        One nonblank DLC label per input path.
+    wind_speed : list[float]
+        One finite, nonnegative nominal speed in m/s per input path.
+    channels : list[str], "all", or None
+        Channel selection forwarded to concatenate_stats; None selects all.
+
+    Returns
+    -------
+    All_stats
+        Calculated tables and independent metadata lists, without CSV export.
+
+    Examples
+    --------
+    >>> stats = calculate_statistics(["case.int"], dlc=["DLC12"], wind_speed=[8.0])
+    """
+    if not isinstance(files, list) or any(not isinstance(file, (str, Path)) for file in files):
+        raise ValueError("files must be a list of simulation paths (strings or pathlib.Path).")
+    labels, speeds = _validate_statistics_metadata(len(files), dlc, wind_speed)
+    result = concatenate_stats(files, channels=channels)
+    result.dlc = labels
+    result.wind_speed = speeds
+    return result
 
 
 def concatenate_stats(input_file_df: list | pd.DataFrame, channels: ChannelSelection | None = None) -> All_stats:

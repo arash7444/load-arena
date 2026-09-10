@@ -1,4 +1,6 @@
-from load_arena.AI.AI_tool_calling_V3 import console
+from rich.console import Console
+
+console = Console()
 import plotly.graph_objects as go
 
 from load_arena.data_reader import read_hawc2_flex
