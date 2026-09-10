@@ -45,13 +45,20 @@ def main() -> None:
     # statistics.explore(channel="Aerot._[kW]", statistic="mean")
 
 
-    statistics.explore(
+
+    fig = statistics.explore(
         channel="Aerot._[kW]",
         statistic="max",
         x_channel="WSPgl._[m/s]",
         x_statistic="mean",
         kind="scatter",
+        show=False,
     )
+    fig.update_layout(
+        plot_bgcolor="lightgray",  # Inside the axes
+        paper_bgcolor="white",    # Outside the axes
+    )
+    fig.show()
     input("Press enter to exit")
 
 
