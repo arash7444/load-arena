@@ -174,17 +174,23 @@ class LoadArenaProject:
         -------
         ULSStats
             Global and per-family min, max, and signed AbsMax values with source
-            attribution. CSVs contain one global row per channel and independent
-            family rankings in a separate, safely named file per channel.
+            attribution, plus the original family-average result in
+            ``family_stats``. CSVs contain one global row per channel and
+            independent family rankings in a separate, safely named file per
+            channel.
 
         Examples
         --------
         >>> uls = project.run_uls()
+        >>> family_figure = uls.family_stats.explore(
+        ...     channel="TowerMx_[kNm]", statistic="max", show=False,
+        ... )
         """
         self._require_enabled("uls")
         cases = load_cases(self.config, "uls")
         statistics = concatenate_stats(cases, channels=self.config.analysis.uls.channels)
-        result = calc_uls(calc_family_avg(statistics, cases), statistics)
+        family_stats = calc_family_avg(statistics, cases)
+        result = calc_uls(family_stats, statistics)
         channels = [column[len("max_"):] for column in result.ULS.columns[::6]]
         global_rows = []
         tables = {}

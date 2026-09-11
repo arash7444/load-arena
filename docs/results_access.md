@@ -101,20 +101,91 @@ ascending x order, retaining input order for equal x values. Scatter and bar ret
 simulation order. Equal x values are never aggregated; bars at the same numeric x
 can overlap. Filename hover information stays paired with the original simulation.
 
-Hover over a point to inspect its filename and value. Repeated filenames remain
-separate points, and DataFrame index labels do not affect positional alignment.
-No extra metadata or simulation inputs are required. DLC/wind-speed grouping
-and family averages are deferred; filenames are not parsed for metadata.
+Hover over a point to inspect its filename and value. Hover text displays only
+the filename basename for readability; the original full path remains unchanged
+in the result and Plotly metadata. Repeated filenames remain separate points,
+and DataFrame index labels do not affect positional alignment. No extra metadata
+or simulation inputs are required. `All_stats.explore()` does not parse filenames,
+group simulations, or calculate family averages.
 Invalid selections, empty results, mismatched filename counts, and nonfinite
 selected values raise `ValueError` without silently dropping rows.
 
 Exploration uses stored raw statistics; it neither rereads simulations nor changes
 the result tables. Existing `.mean`, `.std`, `.min`, and `.max` access is unchanged.
 
+## Explore family averages interactively
+
+`project.run_uls()` returns one `ULSStats` object and exposes the stored
+`FamilyAvg` calculation as `uls.family_stats`. No separate calculation is needed:
+
+```python
+uls = project.run_uls()
+family_stats = uls.family_stats
+
+print(family_stats.mean.columns.tolist())
+print(family_stats.family_name)
+```
+
+Explore an exact channel using one of `mean`, `std`, `min`, or `max`. The default
+x-axis is the stored `Family` column, with one unconnected marker per family:
+
+```python
+fig = family_stats.explore(
+    channel="TowerMx_[kNm]",
+    statistic="max",
+)
+
+# Build and return the same kind of figure without displaying it.
+fig = family_stats.explore(
+    channel="TowerMx_[kNm]",
+    statistic="max",
+    show=False,
+)
+```
+
+Set `plf=True` to select the corresponding stored PLF-adjusted table:
+
+```python
+fig = family_stats.explore(
+    channel="TowerMx_[kNm]",
+    statistic="max",
+    plf=True,
+)
+```
+
+The `x` argument can instead name another exact channel. Both numeric axes use
+the same selected statistic and PLF mode and remain aligned by stored family row:
+
+```python
+fig = family_stats.explore(
+    x="WindSpeed_[m/s]",
+    channel="TowerMx_[kNm]",
+    statistic="mean",
+    plf=False,
+)
+```
+
+The figure title identifies the statistic and whether the selected data is raw or
+PLF-adjusted. Hover text shows the family, value, exact channel, statistic, PLF
+status, and the basenames of files belonging to that family. Full file paths remain
+available in the stored result and Plotly metadata.
+
+Exploration only visualizes the selected `FamilyAvg` table. It does not call
+`calc_family_avg()`, reread simulations, recalculate values, reorder families, or
+modify stored data. Invalid statistics, non-Boolean `plf`, missing or duplicate
+channels, empty results, inconsistent family metadata, and nonnumeric or nonfinite
+selected channel values raise `ValueError`.
+
+Calculated results from `project.run_uls()` and `calc_uls()` always provide
+`family_stats`. The field is optional only so legacy code can still construct
+`ULSStats(ULS=..., Family_ULS=...)` directly.
+
 ## ULS: global extremes and family results
 
-`uls.ULS` is a one-row global table. `uls.Family_ULS` contains one row per family.
-Both contain value/source pairs for `max`, `min`, and `AbsMax`.
+`uls.ULS` is a one-row global table. `uls.Family_ULS` contains one row per family,
+and `uls.family_stats` contains the original family-average calculation used to
+produce those ULS results. The ULS tables contain value/source pairs for `max`,
+`min`, and `AbsMax`.
 
 ```python
 # Each channel occupies six columns: three values and their source filenames.

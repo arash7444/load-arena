@@ -4,7 +4,10 @@ from pandas import Timedelta
 from dataclasses import dataclass
 import pandas as pd
 from rich.console import Console
-from typing import List, Dict
+from typing import TYPE_CHECKING, List, Dict, Literal
+
+if TYPE_CHECKING:
+    from plotly.graph_objects import Figure
 console = Console()
 
 from load_arena.process.concatenate_stats import All_stats, concatenate_stats
@@ -32,6 +35,45 @@ class FamilyAvg:
     filename: List[str]
     family_name: List[str]
     case_folder: List[str]
+
+    def explore(
+        self, *, channel: str, statistic: Literal["mean", "std", "min", "max"],
+        x: str = "Family", plf: bool = False, show: bool = True,
+    ) -> "Figure":
+        """Plot a stored family statistic without recalculating family averages.
+
+        Parameters
+        ----------
+        channel : str
+            Exact y-axis channel name, including units.
+        statistic : {"mean", "std", "min", "max"}
+            Stored family statistic to explore.
+        x : str, default "Family"
+            ``Family`` or an exact channel name from the selected table.
+        plf : bool, default False
+            Select the corresponding PLF-adjusted table when True.
+        show : bool, default True
+            Display the figure using Plotly's configured renderer.
+
+        Returns
+        -------
+        plotly.graph_objects.Figure
+            Interactive marker plot of the stored family result.
+
+        Examples
+        --------
+        >>> fig = family_stats.explore(
+        ...     channel="TowerMx_[kNm]", statistic="max", show=False
+        ... )
+        """
+        from load_arena.visualization.family_avg_plots import plot_family_avg
+
+        figure = plot_family_avg(
+            self, channel=channel, statistic=statistic, x=x, plf=plf,
+        )
+        if show:
+            figure.show()
+        return figure
     
 
 def calc_family_avg(all_stats: All_stats, df_input: pd.DataFrame) -> FamilyAvg:

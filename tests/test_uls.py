@@ -2,7 +2,7 @@ import pandas as pd
 
 from load_arena.process.concatenate_stats import All_stats
 from load_arena.process.family_avg import FamilyAvg
-from load_arena.process.uls import calc_uls
+from load_arena.process.uls import ULSStats, calc_uls
 
 
 def test_calc_uls_uses_plf_stats_and_tracks_filenames():
@@ -74,6 +74,7 @@ def test_calc_uls_uses_plf_stats_and_tracks_filenames():
 
     uls_stats = calc_uls(family_stats, all_stats)
 
+    assert uls_stats.family_stats is family_stats
     assert uls_stats.ULS["max_Load"].tolist() == [9.0]
     assert uls_stats.ULS["max_Load_filename"].tolist() == ["case_003"]
     assert uls_stats.ULS["min_Load"].tolist() == [-10.0]
@@ -231,3 +232,25 @@ def test_calc_uls_suffixes_manually_duplicated_channel_names():
     assert uls_stats.Family_ULS["AbsMax_Load__2_filename"].iloc[0] == "case_002"
     assert uls_stats.ULS["AbsMax_Load"].iloc[0] == -10.0
     assert uls_stats.ULS["AbsMax_Load__2"].iloc[0] == 5.0
+
+
+def test_uls_stats_legacy_construction_keeps_family_stats_optional():
+    """Preserve direct two-table ULSStats construction for existing callers.
+
+    Parameters
+    ----------
+    None
+        The test constructs its inputs directly.
+
+    Returns
+    -------
+    None
+        The legacy constructor succeeds with an absent family-average result.
+
+    Examples
+    --------
+    >>> test_uls_stats_legacy_construction_keeps_family_stats_optional()
+    """
+    result = ULSStats(ULS=pd.DataFrame(), Family_ULS=pd.DataFrame())
+
+    assert result.family_stats is None

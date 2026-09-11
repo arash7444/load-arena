@@ -2,6 +2,7 @@
 
 from math import isfinite
 from numbers import Real
+from pathlib import Path
 from typing import TYPE_CHECKING, Literal
 
 import pandas as pd
@@ -107,7 +108,10 @@ def plot_statistics(
         rows.sort(key=lambda row: x_values[row])
     trace_data = dict(
         x=[x_values[row] for row in rows], y=[values[row] for row in rows], name="Simulations",
-        customdata=[[str(stats.filename[row]), row] for row in rows],
+        customdata=[
+            [Path(str(stats.filename[row])).name, row, str(stats.filename[row])]
+            for row in rows
+        ],
         hovertemplate="Simulation row: %{customdata[1]}<br>File: %{customdata[0]}"
         "<br>X: %{x}<br>Y: %{y}<extra></extra>",
     )

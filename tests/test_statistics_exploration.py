@@ -196,6 +196,30 @@ def test_display_and_legacy_construction(stats, monkeypatch):
     assert isinstance(legacy.explore(channel="load_[kN]", statistic="mean", show=False), go.Figure)
 
 
+def test_hover_displays_basename_and_retains_full_path(stats):
+    """Shorten displayed filenames without discarding full source paths.
+
+    Parameters
+    ----------
+    stats : All_stats
+        Synthetic result fixture.
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    >>> # Run: pytest tests/test_statistics_exploration.py -k basename
+    """
+    stats.filename[0] = r"D:\results\DLC12\case_001.int"
+    figure = stats.explore(channel="load_[kN]", statistic="mean", show=False)
+    customdata = figure.data[0].customdata[0]
+    assert customdata[0] == "case_001.int"
+    assert customdata[2] == r"D:\results\DLC12\case_001.int"
+    assert r"D:\results" not in figure.data[0].hovertemplate
+
+
 def test_visualization_import_without_ai_credentials():
     """Import plotting in a fresh process without loading the AI integration.
 

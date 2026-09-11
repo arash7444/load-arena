@@ -5,6 +5,7 @@ from importlib import import_module
 from unittest.mock import Mock
 
 import pandas as pd
+import plotly.graph_objects as go
 import pytest
 import yaml
 
@@ -243,9 +244,16 @@ def test_statistics_and_uls_match_existing_pipeline(project_files, monkeypatch):
     cases = load_cases(project.config, "uls")
     direct_stats = concatenate_stats(cases, channels=project.config.analysis.uls.channels)
     expected = calc_uls(calc_family_avg(direct_stats, cases), direct_stats)
+    project_module = import_module("load_arena.project.project")
+    family_avg_spy = Mock(wraps=project_module.calc_family_avg)
+    monkeypatch.setattr(project_module, "calc_family_avg", family_avg_spy)
     actual = project.run_uls()
+    assert family_avg_spy.call_count == 1
+    assert actual.family_stats is not None
     pd.testing.assert_frame_equal(expected.ULS, actual.ULS)
     pd.testing.assert_frame_equal(expected.Family_ULS, actual.Family_ULS)
+    pd.testing.assert_frame_equal(expected.family_stats.mean, actual.family_stats.mean)
+    pd.testing.assert_frame_equal(expected.family_stats.max_plf, actual.family_stats.max_plf)
     saved = pd.read_csv(project.config.output.directory / "statistics/mean.csv")
     assert saved.filename.tolist() == stats.filename
     assert actual.ULS["AbsMax_Load_[kN]"].iloc[0] == 6
@@ -370,7 +378,16 @@ def test_real_fixture_uls(tmp_path):
     cases = load_cases(project.config, "uls")
     stats = concatenate_stats(cases, channels=project.config.analysis.uls.channels)
     direct = calc_uls(calc_family_avg(stats, cases), stats)
-    pd.testing.assert_frame_equal(project.run_uls().ULS, direct.ULS)
+    result = project.run_uls()
+    pd.testing.assert_frame_equal(result.ULS, direct.ULS)
+    assert result.family_stats is not None
+
+    figure = result.family_stats.explore(
+        channel="WSPgl._[m/s]", statistic="max", show=False,
+    )
+    assert isinstance(figure, go.Figure)
+    assert list(figure.data[0].x) == result.family_stats.max["Family"].tolist()
+    assert list(figure.data[0].y) == result.family_stats.max["WSPgl._[m/s]"].tolist()
 
 
 @pytest.mark.parametrize("mode", ["uls", "fls"])

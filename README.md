@@ -93,6 +93,12 @@ project = LoadArenaProject.from_yaml("demo/project/project.yaml")
 statistics = project.run_statistics()
 uls = project.run_uls()
 fls = project.run_fls()
+
+# Inspect or plot the original family-average result used by ULS.
+family_stats = uls.family_stats
+figure = family_stats.explore(
+    channel="WSPgl._[m/s]", statistic="max", show=False,
+)
 ```
 
 For examples of selecting channels, files, families, DELs, and stored rainflow
@@ -130,7 +136,7 @@ not a validated engineering campaign.
 - FLS results are organized by channel:
   `channel = result.channels["TowerMy_[kNm]"]`. Each channel contains:
   `channel.files` (one row per input case), `channel.rainflow_results[case_row]`
-  (complete unbinned cycles), and `channel.campaign` (Wöhler exponent and DEL).
+  (complete unbinned cycles), and `channel.campaign` (WÃ¶hler exponent and DEL).
   Shared parameters remain `result.n_ref` and `result.method`. The old flat
   `per_case`, `campaign`, and `rainflow_results` fields have been removed.
 - Each channel's file table contains `case_row`, `filename`, `occurrences`, and

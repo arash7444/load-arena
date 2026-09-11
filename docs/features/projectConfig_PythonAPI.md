@@ -39,7 +39,8 @@ Public methods:
 
 - `LoadArenaProject.from_yaml(path) -> LoadArenaProject`
 - `run_statistics() -> All_stats`
-- `run_uls() -> ULSStats`
+- `run_uls() -> ULSStats`, including the original `FamilyAvg` result as
+  `uls.family_stats`
 - `run_fls() -> FLSResult`
 
 Expose validated configuration as `project.config` and retain the absolute source YAML path. Runs operate independently, without prerequisite ordering, persistent caching, or a primary `run()` method.
@@ -84,7 +85,11 @@ Reuse this pipeline:
 4. `calc_family_avg()`.
 5. `calc_uls()`.
 
-Return `ULSStats` unchanged. ULS computes its required statistics even when standalone statistics is disabled.
+Return one `ULSStats` object containing global `ULS`, per-family `Family_ULS`, and
+the original `FamilyAvg` calculation as `family_stats`. ULS computes its required
+statistics even when standalone statistics is disabled. Existing direct construction
+with only `ULS` and `Family_ULS` remains supported; calculated results always populate
+`family_stats`.
 
 **FLS**
 

@@ -25,7 +25,10 @@ def main() -> None:
     """
     project = LoadArenaProject.from_yaml(Path(__file__).with_name("project.yaml"))
     statistics = project.run_statistics()
+    
     uls = project.run_uls()
+    family_stats = uls.family_stats
+    
     fls = project.run_fls()
     print(f"Statistics: {len(statistics.filename)} simulations")
     print(uls.ULS)
@@ -58,9 +61,24 @@ def main() -> None:
         plot_bgcolor="lightgray",  # Inside the axes
         paper_bgcolor="white",    # Outside the axes
     )
+
+
+#### Family stat plots
+    # fig = family_stats.explore(
+    #     x="WSPgl._[m/s]",
+    #     channel="Aerot._[kW]",
+    #     statistic="mean",
+    #     plf=False,
+    # )
+
+    # fig = family_stats.explore(
+    # channel="Aerot._[kW]",
+    # statistic="max",
+    # plf=True,
+    # )
+
+
     fig.show()
     input("Press enter to exit")
-
-
 if __name__ == "__main__":
     main()

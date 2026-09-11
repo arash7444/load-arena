@@ -9,8 +9,33 @@ from load_arena.process.family_avg import FamilyAvg
 
 @dataclass
 class ULSStats:
+    """Store global, per-family, and source family-average ULS results.
+
+    Parameters
+    ----------
+    ULS : pandas.DataFrame
+        One-row global ULS result.
+    Family_ULS : pandas.DataFrame
+        Per-family ULS values and source attribution.
+    family_stats : FamilyAvg or None, default None
+        Original family-average input when produced by ``calc_uls``. The default
+        preserves legacy direct construction.
+
+    Returns
+    -------
+    ULSStats
+        Container exposing all ULS result levels.
+
+    Examples
+    --------
+    >>> result = ULSStats(ULS=global_table, Family_ULS=family_table)
+    >>> result.family_stats is None
+    True
+    """
+
     ULS: pd.DataFrame
     Family_ULS: pd.DataFrame
+    family_stats: FamilyAvg | None = None
 
 
 def _channel_columns(df: pd.DataFrame) -> list[str]:
@@ -312,17 +337,24 @@ def calc_uls(family_stats: FamilyAvg, all_stats: All_stats) -> ULSStats:
     Returns
     -------
     ULSStats
-        Dataclass containing global ``ULS`` and per-family ``Family_ULS``
-        DataFrames.
+        Dataclass containing global ``ULS``, per-family ``Family_ULS``, and the
+        original ``family_stats`` input.
 
     Examples
     --------
     >>> family_stats = calc_family_avg(all_stats_hawc2, df_input)
     >>> uls_stats = calc_uls(family_stats, all_stats_hawc2)
     >>> uls_stats.ULS
+    >>> uls_stats.family_stats is family_stats
+    True
     """
-    family_stats, all_stats = _normalize_duplicate_columns(family_stats, all_stats)
-    family_uls = _build_family_uls(family_stats, all_stats)
+    source_family_stats = family_stats
+    normalized_family_stats, normalized_all_stats = _normalize_duplicate_columns(
+        family_stats, all_stats,
+    )
+    family_uls = _build_family_uls(normalized_family_stats, normalized_all_stats)
     uls = _build_global_uls(family_uls)
 
-    return ULSStats(ULS=uls, Family_ULS=family_uls)
+    return ULSStats(
+        ULS=uls, Family_ULS=family_uls, family_stats=source_family_stats,
+    )
