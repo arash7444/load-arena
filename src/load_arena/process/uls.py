@@ -1,4 +1,4 @@
-from dataclasses import dataclass, replace
+from dataclasses import dataclass, field, replace
 
 import pandas as pd
 
@@ -20,6 +20,8 @@ class ULSStats:
     family_stats : FamilyAvg or None, default None
         Original family-average input when produced by ``calc_uls``. The default
         preserves legacy direct construction.
+    global_provenance : pandas.DataFrame, optional
+        Governing family and structured contributor metadata for global results.
 
     Returns
     -------
@@ -36,6 +38,7 @@ class ULSStats:
     ULS: pd.DataFrame
     Family_ULS: pd.DataFrame
     family_stats: FamilyAvg | None = None
+    global_provenance: pd.DataFrame = field(default_factory=pd.DataFrame)
 
 
 def _channel_columns(df: pd.DataFrame) -> list[str]:
@@ -169,65 +172,53 @@ def _choose_extreme(min_value: float, max_value: float) -> tuple[float, str]:
     return max_value, "max"
 
 
-def _filename_for_extreme(
-    all_stats: All_stats,
+def _family_value_provenance(
+    family_stats: FamilyAvg,
     family: object,
-    channel: str,
-    side: str,
-    target_value: float,
-) -> str:
-    """
-    Find the source filename for a selected family-level ULS channel.
+    statistic: str,
+    channel_position: int,
+) -> dict | None:
+    """Return structured provenance for one stored family-level result.
 
     Parameters
     ----------
-    all_stats : All_stats
-        Per-simulation statistics with PLF-adjusted min and max DataFrames.
+    family_stats : FamilyAvg
+        Processed family statistics with optional long-form provenance.
     family : object
-        Family identifier used to filter the simulations.
-    channel : str
-        Channel name whose ULS value is being traced.
-    side : str
-        Selected side, either ``"min"`` or ``"max"``.
-    target_value : float
-        Family-level ULS value used to choose the closest source simulation
-        when the family statistic is aggregated.
+        Family identifier for the result row.
+    statistic : str
+        Statistic name, normally ``"min"`` or ``"max"``.
+    channel_position : int
+        Zero-based channel position excluding the Family column.
 
     Returns
     -------
-    str
-        Filename of the source simulation associated with the selected side.
+    dict or None
+        Matching provenance record, or None for legacy objects without metadata.
 
     Examples
     --------
-    >>> all_stats = All_stats(
-    ...     mean=pd.DataFrame({"Load": [0.0]}),
-    ...     std=pd.DataFrame({"Load": [0.0]}),
-    ...     min=pd.DataFrame({"Load": [-1.0]}),
-    ...     max=pd.DataFrame({"Load": [2.0]}),
-    ...     mean_plf=pd.DataFrame({"Load": [0.0]}),
-    ...     std_plf=pd.DataFrame({"Load": [0.0]}),
-    ...     min_plf=pd.DataFrame({"Load": [-1.0]}),
-    ...     max_plf=pd.DataFrame({"Load": [2.0]}),
-    ...     filename=["case_001"],
-    ...     family=[1],
-    ... )
-    >>> _filename_for_extreme(all_stats, 1, "Load", "max", 2.0)
-    'case_001'
+    >>> record = _family_value_provenance(family_stats, 1, "max", 0)
     """
-    mask = pd.Series(all_stats.family) == family
-    source = all_stats.min_plf if side == "min" else all_stats.max_plf
-    family_values = source.loc[mask.values, channel]
+    provenance = family_stats.provenance
+    required = {"Family", "statistic", "plf_adjusted", "channel_position"}
+    if provenance.empty or not required.issubset(provenance.columns):
+        return None
+    matches = provenance.loc[
+        (provenance["Family"] == family)
+        & (provenance["statistic"] == statistic)
+        & provenance["plf_adjusted"].astype(bool)
+        & (provenance["channel_position"] == channel_position)
+    ]
+    if len(matches) != 1:
+        raise ValueError(
+            f"Expected one PLF provenance record for family {family!r}, "
+            f"statistic {statistic!r}, channel position {channel_position}."
+        )
+    return matches.iloc[0].to_dict()
 
-    if family_values.empty:
-        raise ValueError(f"No source values found for family {family}.")
 
-    closest_index = (family_values - target_value).abs().idxmin()
-    closest_position = source.index.get_loc(closest_index)
-    return all_stats.filename[closest_position]
-
-
-def _build_family_uls(family_stats: FamilyAvg, all_stats: All_stats) -> pd.DataFrame:
+def _build_family_uls(family_stats: FamilyAvg) -> pd.DataFrame:
     """
     Build one PLF-based ULS row per family.
 
@@ -235,15 +226,12 @@ def _build_family_uls(family_stats: FamilyAvg, all_stats: All_stats) -> pd.DataF
     ----------
     family_stats : FamilyAvg
         Family-level statistics containing ``min_plf`` and ``max_plf`` tables.
-    all_stats : All_stats
-        Per-simulation statistics used to trace selected ULS values to filenames.
-
     Returns
     -------
     pd.DataFrame
         Family ULS table with a leading ``Family`` column and ``max_<channel>``,
         ``min_<channel>``, and ``AbsMax_<channel>`` values, each accompanied by
-        a ``_filename`` column. Averaged values use the closest source file.
+        a ``_filename`` column. Filenames exist only for unique exact sources.
 
     Examples
     --------
@@ -257,12 +245,15 @@ def _build_family_uls(family_stats: FamilyAvg, all_stats: All_stats) -> pd.DataF
         family = min_row["Family"]
         row = {"Family": family}
 
-        for channel in channels:
+        for channel_position, channel in enumerate(channels):
             for side, source_row in (("max", max_row), ("min", min_row)):
                 value = source_row[channel]
                 row[f"{side}_{channel}"] = value
-                row[f"{side}_{channel}_filename"] = _filename_for_extreme(
-                    all_stats, family, channel, side, value,
+                provenance = _family_value_provenance(
+                    family_stats, family, side, channel_position,
+                )
+                row[f"{side}_{channel}_filename"] = (
+                    None if provenance is None else provenance["source_file"]
                 )
             value, side = _choose_extreme(min_row[channel], max_row[channel])
             row[f"AbsMax_{channel}"] = value
@@ -270,7 +261,81 @@ def _build_family_uls(family_stats: FamilyAvg, all_stats: All_stats) -> pd.DataF
 
         rows.append(row)
 
-    return pd.DataFrame(rows)
+    result = pd.DataFrame(rows)
+    for column in result.columns:
+        if column.endswith("_filename"):
+            filenames = result[column].astype(object)
+            result[column] = filenames.where(filenames.notna(), None)
+    return result
+
+
+def _build_global_provenance(
+    family_uls: pd.DataFrame,
+    family_stats: FamilyAvg,
+) -> pd.DataFrame:
+    """Build structured provenance for every global ULS channel and side.
+
+    Parameters
+    ----------
+    family_uls : pandas.DataFrame
+        Processed family ULS candidates used by the global calculation.
+    family_stats : FamilyAvg
+        Family result containing per-value provenance.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Long-form global max, min, and signed AbsMax provenance.
+
+    Examples
+    --------
+    >>> provenance = _build_global_provenance(family_uls, family_stats)
+    """
+    records = []
+    channels = [column[len("max_"):] for column in family_uls.columns[1::6]]
+    for channel_position, channel in enumerate(channels):
+        side_records = {}
+        for side in ("max", "min"):
+            key = f"{side}_{channel}"
+            values = family_uls[key]
+            source_index = values.idxmax() if side == "max" else values.idxmin()
+            family = family_uls.loc[source_index, "Family"]
+            family_record = _family_value_provenance(
+                family_stats, family, side, channel_position,
+            )
+            record = {
+                "channel": channel,
+                "side": side,
+                "governing_side": side,
+                "value": family_uls.loc[source_index, key],
+                "Family": family,
+                "averaging_method": None,
+                "member_count": None,
+                "member_files": tuple(),
+                "contributing_files": tuple(),
+                "source_file": family_uls.loc[source_index, f"{key}_filename"],
+            }
+            if family_record is not None:
+                for field_name in (
+                    "averaging_method", "member_count", "member_files",
+                    "contributing_files", "source_file",
+                ):
+                    record[field_name] = family_record[field_name]
+            records.append(record)
+            side_records[side] = record
+
+        _, governing_side = _choose_extreme(
+            side_records["min"]["value"], side_records["max"]["value"],
+        )
+        abs_record = dict(side_records[governing_side])
+        abs_record["side"] = "AbsMax"
+        abs_record["governing_side"] = governing_side
+        records.append(abs_record)
+    result = pd.DataFrame(records)
+    if "source_file" in result:
+        source_files = result["source_file"].astype(object)
+        result["source_file"] = source_files.where(source_files.notna(), None)
+    return result
 
 
 def _build_global_uls(family_uls: pd.DataFrame) -> pd.DataFrame:
@@ -318,7 +383,12 @@ def _build_global_uls(family_uls: pd.DataFrame) -> pd.DataFrame:
         row[f"AbsMax_{channel}"] = value
         row[f"AbsMax_{channel}_filename"] = row[f"{side}_{channel}_filename"]
 
-    return pd.DataFrame([row])
+    result = pd.DataFrame([row])
+    for column in result.columns:
+        if column.endswith("_filename"):
+            filenames = result[column].astype(object)
+            result[column] = filenames.where(filenames.notna(), None)
+    return result
 
 
 def calc_uls(family_stats: FamilyAvg, all_stats: All_stats) -> ULSStats:
@@ -331,14 +401,15 @@ def calc_uls(family_stats: FamilyAvg, all_stats: All_stats) -> ULSStats:
         Family-level statistics returned by ``calc_family_avg``. The calculation
         uses ``min_plf`` and ``max_plf`` only.
     all_stats : All_stats
-        Per-simulation statistics returned by ``concatenate_stats``. This is
-        used to identify the source filename for each selected ULS value.
+        Per-simulation statistics returned by ``concatenate_stats``, retained in
+        the public signature for compatibility. Its values and filenames never
+        recalculate or attribute family results.
 
     Returns
     -------
     ULSStats
         Dataclass containing global ``ULS``, per-family ``Family_ULS``, and the
-        original ``family_stats`` input.
+        original ``family_stats`` input plus structured global provenance.
 
     Examples
     --------
@@ -349,12 +420,18 @@ def calc_uls(family_stats: FamilyAvg, all_stats: All_stats) -> ULSStats:
     True
     """
     source_family_stats = family_stats
-    normalized_family_stats, normalized_all_stats = _normalize_duplicate_columns(
+    normalized_family_stats, _ = _normalize_duplicate_columns(
         family_stats, all_stats,
     )
-    family_uls = _build_family_uls(normalized_family_stats, normalized_all_stats)
+    family_uls = _build_family_uls(normalized_family_stats)
     uls = _build_global_uls(family_uls)
+    global_provenance = _build_global_provenance(
+        family_uls, normalized_family_stats,
+    )
 
     return ULSStats(
-        ULS=uls, Family_ULS=family_uls, family_stats=source_family_stats,
+        ULS=uls,
+        Family_ULS=family_uls,
+        family_stats=source_family_stats,
+        global_provenance=global_provenance,
     )

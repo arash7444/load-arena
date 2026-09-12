@@ -7,8 +7,12 @@ Existing output files are preserved; legacy `family.csv` is no longer written.
 
 - Calculate separate signed Min, Max, and AbsMax results for every channel, globally and per family, using PLF-adjusted statistics.
 - Global Min selects the smallest family minimum; Global Max selects the largest family maximum. AbsMax selects the largest magnitude and retains its sign.
-- Correct family minimum aggregation: `max` selects the smallest minimum; `mean_max` averages the smallest half of minima. Keep `mean` and maximum-side aggregation unchanged.
-- Preserve the closest-source filename rule for averaged values. Equal-distance matches retain the first source filename.
+- Correct family minimum aggregation: `max` selects the smallest minimum;
+  `mean_half` averages the smallest half of minima. Keep `mean` and maximum-side
+  aggregation unchanged.
+- Retain exact source paths only for uniquely governing `max` results. Aggregated
+  and tied values have no invented source filename; structured provenance records
+  their members and contributors.
 
 ## Internal results
 
@@ -38,7 +42,9 @@ Sanitize invalid filename characters to `_`, preserving the original channel nam
 
 - Modify existing calculation, aggregation, export, and demo functions; add Python functions only if necessary.
 - Update the calculation plan and affected docstrings. Any new function must include purpose, Parameters, Returns, and Examples.
-- Extend existing tests to cover independent extrema and filenames, signed AbsMax, corrected minimum aggregation, averaged-value provenance, duplicate channels, CSV headers, independent rankings, and safe filenames.
+- Extend existing tests to cover independent extrema and filenames, signed AbsMax,
+  corrected minimum aggregation, structured aggregate provenance, duplicate
+  channels, CSV headers, independent rankings, and safe filenames.
 - Run ULS, family-average, and project-export tests.
 
 Defaults: preserve existing family/source order for equal ranking values; prefer Max when Min and Max have equal absolute magnitude. Keep existing averaging group sizes and PLF application unchanged.

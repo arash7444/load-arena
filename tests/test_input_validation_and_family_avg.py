@@ -146,7 +146,24 @@ def test_calc_family_avg_requires_one_method_per_family():
         calc_family_avg(all_stats, df_input)
 
 
-def test_calc_family_avg_rejects_unknown_method():
+@pytest.mark.parametrize("method", ["average", "mean_max"])
+def test_calc_family_avg_rejects_unknown_method(method):
+    """Reject unsupported averaging methods, including the removed old name.
+
+    Parameters
+    ----------
+    method : str
+        Unsupported family averaging method.
+
+    Returns
+    -------
+    None
+        The test passes when validation lists only the current method names.
+
+    Examples
+    --------
+    >>> # Run: pytest tests/test_input_validation_and_family_avg.py -k unknown
+    """
     df_input = pd.DataFrame(
         {
             "Folder": ["tests/h2_res/dlc12/"],
@@ -154,12 +171,12 @@ def test_calc_family_avg_rejects_unknown_method():
             "Timeseries": ["case_001"],
             "Family": [1],
             "PLF": [1.0],
-            "Averaging_method": ["average"],
+            "Averaging_method": [method],
         }
     )
     all_stats = _all_stats_for_one_case()
 
-    with pytest.raises(ValueError, match="Allowed values are: mean, max, mean_max"):
+    with pytest.raises(ValueError, match="Allowed values are: mean, max, mean_half"):
         calc_family_avg(all_stats, df_input)
 
 
@@ -203,12 +220,27 @@ def test_calc_family_avg_mean_collects_family_metadata():
     for statistic in ("mean", "std", "min", "max", "mean_plf", "std_plf", "min_plf", "max_plf"):
         values = [-12.0, -8.0, -4.0, -2.0] if statistic.startswith("min") else [1.0, 3.0, 5.0, 9.0]
         setattr(all_stats, statistic, pd.DataFrame({"Load": values}))
-    for method, expected_min, expected_max in (("mean", -6.5, 4.5), ("max", -12.0, 9.0), ("mean_max", -10.0, 7.0)):
+    for method, expected_min, expected_max in (("mean", -6.5, 4.5), ("max", -12.0, 9.0), ("mean_half", -10.0, 7.0)):
         df_input["Averaging_method"] = method
         aggregated = calc_family_avg(all_stats, df_input)
         for suffix in ("", "_plf"):
             assert getattr(aggregated, f"min{suffix}")["Load"].iloc[0] == expected_min
             assert getattr(aggregated, f"max{suffix}")["Load"].iloc[0] == expected_max
+
+    df_input["Averaging_method"] = "max"
+    all_stats.max = pd.DataFrame({"Load": [9.0, 9.0, 5.0, 1.0]})
+    all_stats.max_plf = all_stats.max.copy()
+    tied = calc_family_avg(all_stats, df_input)
+    tied_max = tied.provenance.loc[
+        (tied.provenance["statistic"] == "max")
+        & ~tied.provenance["plf_adjusted"]
+    ].iloc[0]
+    assert tied_max["contributing_files"] == ("a", "b")
+    assert tied_max["source_file"] is None
+
+    assert set(family_stats.provenance["averaging_method"]) == {"mean"}
+    assert family_stats.provenance["member_count"].eq(2).all()
+    assert family_stats.provenance.iloc[0]["member_files"] == ("case_001", "case_002")
 
 
 

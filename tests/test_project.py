@@ -175,17 +175,17 @@ def test_invalid_case_values(project_files, column, value):
         LoadArenaProject.from_yaml(path)
 
 
-def test_empty_and_single_mean_max_cases(project_files):
-    """Reject empty tables and mean_max groups that select zero records.
+def test_empty_and_single_mean_half_cases(project_files):
+    """Reject empty tables and mean_half groups that select zero records.
 
     Parameters: project_files supplies an editable CSV.
     Returns: None; both invalid inputs fail preflight.
-    Examples: pytest tests/test_project.py -k mean_max
+    Examples: pytest tests/test_project.py -k mean_half
     """
     path, _ = project_files
     csv = path.parent / "cases.csv"
     table = pd.read_csv(csv).iloc[:1].copy()
-    table["Averaging_method"] = "mean_max"
+    table["Averaging_method"] = "mean_half"
     table.to_csv(csv, index=False)
     with pytest.raises(ProjectConfigError, match="at least two"):
         LoadArenaProject.from_yaml(path)

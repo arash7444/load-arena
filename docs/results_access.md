@@ -167,8 +167,9 @@ fig = family_stats.explore(
 
 The figure title identifies the statistic and whether the selected data is raw or
 PLF-adjusted. Hover text shows the family, value, exact channel, statistic, PLF
-status, and the basenames of files belonging to that family. Full file paths remain
-available in the stored result and Plotly metadata.
+status, averaging method, member count, and the basenames of files belonging to
+that family. Full file paths remain available in the stored result and Plotly
+metadata.
 
 Exploration only visualizes the selected `FamilyAvg` table. It does not call
 `calc_family_avg()`, reread simulations, recalculate values, reorder families, or
@@ -179,6 +180,20 @@ selected channel values raise `ValueError`.
 Calculated results from `project.run_uls()` and `calc_uls()` always provide
 `family_stats`. The field is optional only so legacy code can still construct
 `ULSStats(ULS=..., Family_ULS=...)` directly.
+
+Family averaging accepts `mean`, `max`, and `mean_half`. `mean` uses every family
+member. `max` selects the largest value, except that a stored minimum selects the
+smallest value. `mean_half` averages the largest `floor(n / 2)` values, except that
+a stored minimum averages the smallest half. The raw and PLF-adjusted tables use
+the same rule.
+
+`family_stats.provenance` is a long-form DataFrame with one row per family,
+statistic, PLF mode, and channel. It records `Family`, `statistic`,
+`plf_adjusted`, `channel`, `channel_position`, `value`, `averaging_method`,
+`member_count`, `member_files`, `contributing_files`, and `source_file`.
+File collections are tuples containing their complete original paths. `source_file`
+is populated only for a unique exact result from the `max` method; means,
+half-means, and tied extrema use `None`.
 
 ## ULS: global extremes and family results
 
@@ -221,9 +236,14 @@ print(ranking)
 
 `AbsMax` retains the sign of the governing extreme. ULS values already include
 the configured load factors and family processing; do not multiply them again.
-For averaged family values, source attribution identifies the closest contributing
-simulation. The exported global CSV has a different, channel-per-row layout from
-`uls.ULS`; see [ULS output schemas](features/plf_uls_calculation_plan.md).
+The `*_filename` fields contain a full source path only when the family value has
+one exact governing simulation. Aggregated values and tied extrema use `None`; no
+nearby simulation is invented as the source. `uls.global_provenance` separately
+records the governing family, side, averaging method, member files, contributors,
+and exact source for every global result. Provenance is retained in memory and is
+not added to CSV schemas. The exported global CSV has a different,
+channel-per-row layout from `uls.ULS`; see
+[ULS output schemas](features/plf_uls_calculation_plan.md).
 
 ## FLS: select a channel, then access its files and cycles
 

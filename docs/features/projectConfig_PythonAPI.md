@@ -89,7 +89,8 @@ Return one `ULSStats` object containing global `ULS`, per-family `Family_ULS`, a
 the original `FamilyAvg` calculation as `family_stats`. ULS computes its required
 statistics even when standalone statistics is disabled. Existing direct construction
 with only `ULS` and `Family_ULS` remains supported; calculated results always populate
-`family_stats`.
+`family_stats`. `FamilyAvg.provenance` and `ULSStats.global_provenance` retain
+structured full-path attribution in memory.
 
 **FLS**
 
@@ -121,7 +122,7 @@ Create directories lazily. Repeat runs replace only known output files and prese
 
 - Replace statistics CSV path string concatenation with `pathlib` joins.
 - Use explicit ULS validation in statistics/family averaging.
-- Check empty case tables, required row values, positive finite PLFs, and valid family averaging methods. Reject single-case `mean_max` groups because their current calculation selects zero rows.
+- Check empty case tables, required row values, positive finite PLFs, and valid family averaging methods. Reject single-case `mean_half` groups because their calculation selects zero rows.
 - Preserve engineering formulas, existing return types, and legacy entry points.
 - Correct CI’s missing `requirements.txt` installation/cache reference to use `pyproject.toml`; include dependency-file changes in CI triggers.
 - Give every new or modified Python function a PEP257 docstring containing purpose, Parameters, Returns, and Examples.
@@ -144,7 +145,9 @@ Add tests covering:
 Retain these documented limitations:
 
 - Campaign FLS aggregation is new orchestration around tested primitives; the demo is not a numerical reference.
-- Family averaging formulas remain unchanged. ULS attribution uses the closest contributing case for aggregated family values.
+- Family averaging supports `mean`, `max`, and `mean_half`. ULS uses stored
+  PLF-adjusted family values and never invents a nearby simulation as the source
+  of an aggregate or tied result.
 - Existing CSV fixtures contain machine-specific paths; new tests/examples use portable paths.
 - Existing readers and aggregation determine channel compatibility and numerical behavior. Broader cleanup remains outside scope.
 

@@ -13,7 +13,7 @@ Equal absolute magnitudes prefer Max. Equal values on the same side retain the
 first family in input order.
 
 Family aggregation uses the configured method. `mean` averages all samples;
-`max` selects the smallest minimum and largest maximum; `mean_max` averages the
+`max` selects the smallest minimum and largest maximum; `mean_half` averages the
 smallest half of minima and largest half of maxima. The half size remains
 `floor(n / 2)`. These minimum-side corrections apply to raw and PLF family tables.
 
@@ -38,11 +38,17 @@ Replace `Load` with the actual channel name. These fields replace the former
 
 ## Filename attribution
 
-Each Min and Max uses its own source side. For aggregated family values, the
-filename is the simulation with the closest PLF-adjusted value on that side;
-it is representative and need not have produced the exact average. Equal
-distances choose the first source simulation. AbsMax copies the selected side's
-filename; global results copy the winning family result's filename.
+`FamilyAvg.provenance` records one row per family, statistic, PLF mode, and
+channel. It retains full member paths as tuples, the files that contributed to
+the calculation, the averaging method, and member count. `mean` records all
+members as contributors. `mean_half` records the selected half. `max` records
+all exact ties and sets `source_file` only when one simulation uniquely governs.
+
+Each ULS Min and Max uses the provenance for its own source side. Aggregate and
+tied results use `None` in `*_filename`; no closest simulation is substituted.
+AbsMax copies its selected side's exact source, if any. `ULSStats.global_provenance`
+records the governing family, side, method, members, contributors, and exact
+source. These provenance tables remain in memory and do not alter CSV schemas.
 
 ## CSV exports
 
@@ -69,7 +75,8 @@ in a previously used output directory.
 
 ## Verification
 
-Regression tests cover separate signed extrema and source filenames, PLF-only
-selection, ties, averaged filename attribution, duplicate channels, corrected
-family minimum aggregation, exact export headers, independent ranking order,
-and safe filenames. Existing project and family tests remain applicable.
+Regression tests cover separate signed extrema and exact source filenames,
+PLF-only selection, tied and aggregated provenance, duplicate channels, corrected
+family minimum aggregation, the three-family averaging chain, exact export headers,
+independent ranking order, and safe filenames. Existing project and family tests
+remain applicable.

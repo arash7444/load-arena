@@ -232,8 +232,8 @@ def validate_case_rows(df: pd.DataFrame, mode: Literal["uls", "fls"]) -> None:
             if len(methods) != 1:
                 raise ValueError(f"Family {family} must have exactly one averaging method.")
             method = str(methods[0]).strip().lower()
-            if method not in {"mean", "max", "mean_max"}:
+            if method not in {"mean", "max", "mean_half"}:
                 raise ValueError(f"Unknown Averaging_method for family {family}: {method}. "
-                                 "Allowed values are: mean, max, mean_max.")
-            if method == "mean_max" and len(group) < 2:
-                raise ValueError(f"Family {family}: mean_max requires at least two cases.")
+                                 "Allowed values are: mean, max, mean_half.")
+            if method == "mean_half" and len(group) < 2:
+                raise ValueError(f"Family {family}: mean_half requires at least two cases.")

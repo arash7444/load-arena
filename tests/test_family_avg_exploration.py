@@ -145,6 +145,26 @@ def test_hover_uses_basenames_and_retains_full_paths(family_stats):
     --------
     >>> # Run: pytest tests/test_family_avg_exploration.py -k basenames
     """
+    provenance_rows = []
+    for family, files in zip(family_stats.family_name, family_stats.filename):
+        provenance_rows.append(
+            {
+                "Family": family,
+                "statistic": "max",
+                "plf_adjusted": False,
+                "channel": "TowerMx_[kNm]",
+                "channel_position": 0,
+                "value": 0.0,
+                "averaging_method": "mean_half",
+                "member_count": len(files),
+                "member_files": tuple(files),
+                "contributing_files": tuple(files[:1]),
+                "source_file": None,
+            }
+        )
+    family_stats.provenance = pd.DataFrame(provenance_rows)
+    provenance_before = family_stats.provenance.copy(deep=True)
+
     figure = family_stats.explore(
         channel="TowerMx_[kNm]", statistic="max", show=False,
     )
@@ -154,7 +174,13 @@ def test_hover_uses_basenames_and_retains_full_paths(family_stats):
     assert list(first[5]) == [
         r"D:\results\DLC12\case_001.int", r"D:\results\DLC12\case_002.int"
     ]
+    assert first[6] == "mean_half"
+    assert first[7] == 2
+    assert list(first[8]) == [r"D:\results\DLC12\case_001.int"]
+    assert "Averaging method: %{customdata[6]}" in figure.data[0].hovertemplate
+    assert "Member count: %{customdata[7]}" in figure.data[0].hovertemplate
     assert r"D:\results" not in figure.data[0].hovertemplate
+    pd.testing.assert_frame_equal(family_stats.provenance, provenance_before)
 
 
 def test_show_control_and_result_immutability(family_stats, monkeypatch):

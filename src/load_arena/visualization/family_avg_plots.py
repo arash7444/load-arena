@@ -156,6 +156,88 @@ def _filename_metadata(stats: "FamilyAvg", count: int) -> tuple[list[str], list[
     return labels, full_paths
 
 
+def _plot_provenance(
+    stats: "FamilyAvg",
+    table: pd.DataFrame,
+    families: list,
+    channel: str,
+    statistic: str,
+    plf: bool,
+) -> tuple[list[str], list[list[str]], list[str], list[int], list[list[str]]]:
+    """Select family summaries and full-path metadata for plotted points.
+
+    Parameters
+    ----------
+    stats : FamilyAvg
+        Stored result with optional long-form provenance.
+    table : pandas.DataFrame
+        Selected statistic table used by the plot.
+    families : list
+        Family identifiers in plotted row order.
+    channel : str
+        Exact plotted y-axis channel.
+    statistic : str
+        Selected statistic name.
+    plf : bool
+        Whether the selected table is PLF-adjusted.
+
+    Returns
+    -------
+    tuple
+        Basename labels, full member paths, methods, member counts, and full
+        contributing paths in family row order.
+
+    Examples
+    --------
+    >>> metadata = _plot_provenance(
+    ...     family_stats, family_stats.max, [1], "Load", "max", False,
+    ... )
+    """
+    fallback_labels, fallback_paths = _filename_metadata(stats, len(table))
+    channel_position = [column for column in table.columns if column != "Family"].index(
+        channel
+    )
+    required = {
+        "Family", "statistic", "plf_adjusted", "channel_position",
+        "averaging_method", "member_count", "member_files", "contributing_files",
+    }
+    if stats.provenance.empty or not required.issubset(stats.provenance.columns):
+        return (
+            fallback_labels,
+            fallback_paths,
+            ["unknown"] * len(table),
+            [len(paths) for paths in fallback_paths],
+            fallback_paths,
+        )
+
+    labels = []
+    full_paths = []
+    methods = []
+    member_counts = []
+    contributing_paths = []
+    for row, family in enumerate(families):
+        matches = stats.provenance.loc[
+            (stats.provenance["Family"] == family)
+            & (stats.provenance["statistic"] == statistic)
+            & (stats.provenance["plf_adjusted"] == plf)
+            & (stats.provenance["channel_position"] == channel_position)
+        ]
+        if len(matches) != 1:
+            raise ValueError(
+                f"Expected one provenance record for family {family!r}, "
+                f"statistic {statistic!r}, channel {channel!r}."
+            )
+        record = matches.iloc[0]
+        paths = [str(filename) for filename in record["member_files"]]
+        contributors = [str(filename) for filename in record["contributing_files"]]
+        full_paths.append(paths)
+        contributing_paths.append(contributors)
+        labels.append(", ".join(Path(filename).name for filename in paths))
+        methods.append(str(record["averaging_method"]))
+        member_counts.append(int(record["member_count"]))
+    return labels, full_paths, methods, member_counts, contributing_paths
+
+
 def plot_family_avg(
     stats: "FamilyAvg", *, channel: str,
     statistic: Literal["mean", "std", "min", "max"],
@@ -193,10 +275,15 @@ def plot_family_avg(
     if not isinstance(x, str):
         raise ValueError("x must be 'Family' or an exact channel name.")
     x_values = families if x == "Family" else _numeric_values(table, x, "x")
-    filename_labels, full_paths = _filename_metadata(stats, len(table))
+    filename_labels, full_paths, methods, member_counts, contributing_paths = (
+        _plot_provenance(stats, table, families, channel, statistic, plf)
+    )
     plf_label = "yes" if plf else "no"
     customdata = [
-        [families[row], filename_labels[row], channel, statistic, plf_label, full_paths[row]]
+        [
+            families[row], filename_labels[row], channel, statistic, plf_label,
+            full_paths[row], methods[row], member_counts[row], contributing_paths[row],
+        ]
         for row in range(len(table))
     ]
 
@@ -211,7 +298,8 @@ def plot_family_avg(
         hovertemplate=(
             "Family: %{customdata[0]}<br>Value: %{y}<br>Channel: %{customdata[2]}"
             "<br>Statistic: %{customdata[3]}<br>PLF adjusted: %{customdata[4]}"
-            "<br>Files: %{customdata[1]}<extra></extra>"
+            "<br>Averaging method: %{customdata[6]}"
+            "<br>Member count: %{customdata[7]}<br>Files: %{customdata[1]}<extra></extra>"
         ),
     )
     mode_label = "PLF-adjusted" if plf else "raw"

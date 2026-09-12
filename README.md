@@ -165,9 +165,12 @@ not a validated engineering campaign.
   below `output.directory`. Repeated runs replace known CSV outputs and retain
   unrelated files. Output failures raise errors; multi-file writes are not atomic.
 
-Existing family averaging formulas are unchanged. For aggregated family values,
-ULS source attribution selects the closest contributing case. Existing reader
-channel names and numerical behavior remain authoritative.
+Family averaging supports `mean`, `max`, and `mean_half`; `mean_half` averages
+the upper half for non-minimum statistics and the lower half for minima, using
+`floor(n / 2)` members. `FamilyAvg.provenance` retains full member and contributor
+paths. ULS filename fields contain a path only when one exact simulation uniquely
+governs the family value; aggregated and tied values use `None` instead of an
+invented representative filename. Existing reader channel names remain authoritative.
 
 ## Development
 
