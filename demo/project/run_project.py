@@ -1,6 +1,7 @@
 """Run a portable, illustrative campaign against the checked-in HAWC2 fixtures."""
 
 from load_arena.visualization import statistics_plots
+from load_arena.visualization import statistics_plots
 from pathlib import Path
 
 from load_arena import LoadArenaProject
@@ -32,10 +33,10 @@ def main() -> None:
     fls = project.run_fls()
     print(f"Statistics: {len(statistics.filename)} simulations")
     print(uls.ULS)
-    for name, channel in fls.channels.items():
-        print(name)
-        print(channel.files)
-        print(channel.campaign)
+    # for name, channel in fls.channels.items():
+    #     print(name)
+    #     print(channel.files)
+    #     print(channel.campaign)
     print(f"CSV outputs: {project.config.output.directory}")
     # example:
     ch_tmp = fls.channels["Time_[s]"]
@@ -45,9 +46,10 @@ def main() -> None:
 
 
 
-    # statistics.explore(channel="Aerot._[kW]", statistic="mean")
+    """
+    Plotting
 
-
+    """
 
     fig = statistics.explore(
         channel="Aerot._[kW]",
@@ -61,6 +63,7 @@ def main() -> None:
         plot_bgcolor="lightgray",  # Inside the axes
         paper_bgcolor="white",    # Outside the axes
     )
+    fig.show()
 
 
 #### Family stat plots
@@ -78,7 +81,37 @@ def main() -> None:
     # )
 
 
-    fig.show()
+
+
+    from load_arena import plot
+
+    family_stats = uls.family_stats
+
+    simulation_series = statistics.series(
+        channel="Aerot._[kW]",
+        statistic="max",
+        x_channel="WSPgl._[m/s]",
+        x_statistic="mean",
+        name="Simulations",
+    )
+
+    family_series = family_stats.series(
+        channel="Aerot._[kW]",
+        statistic="mean",
+        x="WSPgl._[m/s]",
+        plf=False,
+        name="Family average",
+    )
+
+    fig2 = plot(simulation_series, family_series, kind="scatter")
+    fig2.update_layout(
+        plot_bgcolor="lightgray",  # Inside the axes
+        paper_bgcolor="white",    # Outside the axes
+    )
+    fig2.show()
+
+
+
     input("Press enter to exit")
 if __name__ == "__main__":
     main()

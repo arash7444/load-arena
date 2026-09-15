@@ -11,7 +11,7 @@ analysis:
   uls:
     enabled: true
     cases: input/ULS_input_file.csv
-    channels: ["WSPgl._[m/s]", "Azi1_[deg]"]
+    channels: ["WSPgl._[m/s]", "Azi1_[deg]", "Aerot._[kW]"]
   fls:
     enabled: true
     cases: input/FLS_input_file.csv
