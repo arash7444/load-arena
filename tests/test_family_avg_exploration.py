@@ -7,6 +7,7 @@ import plotly.graph_objects as go
 import pytest
 
 from load_arena.process.family_avg import FamilyAvg
+from load_arena.visualization.family_avg_plots import plot_family_avg
 
 
 @pytest.fixture
@@ -218,6 +219,104 @@ def test_show_control_and_result_immutability(family_stats, monkeypatch):
             assert getattr(family_stats, name) == value
 
 
+@pytest.mark.parametrize("kind,trace_type,mode", [
+    ("scatter", "scatter", "markers"),
+    ("bar", "bar", None),
+    ("line", "scatter", "lines+markers"),
+])
+def test_explore_supports_common_plot_kinds(family_stats, kind, trace_type, mode):
+    """Expose every common plot kind while retaining family point metadata.
+
+    Parameters
+    ----------
+    family_stats : FamilyAvg
+        Synthetic family result fixture.
+    kind : str
+        Requested common plot kind.
+    trace_type : str
+        Expected Plotly trace type.
+    mode : str or None
+        Expected scatter mode, or None for bar traces.
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    >>> # Run: pytest tests/test_family_avg_exploration.py -k common_plot_kinds
+    """
+    figure = family_stats.explore(
+        channel="TowerMx_[kNm]", statistic="mean", kind=kind, show=False,
+    )
+
+    trace = figure.data[0]
+    assert trace.type == trace_type
+    if mode is not None:
+        assert trace.mode == mode
+    assert list(trace.x) == ["DLC12", "DLC13", "DLC14"]
+    assert [row[0] for row in trace.customdata] == ["DLC12", "DLC13", "DLC14"]
+
+
+def test_line_kind_sorts_numeric_x_with_aligned_family_metadata(family_stats):
+    """Sort numeric family x-values while keeping y and provenance aligned.
+
+    Parameters
+    ----------
+    family_stats : FamilyAvg
+        Synthetic family result fixture.
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    >>> # Run: pytest tests/test_family_avg_exploration.py -k sorts_numeric_x
+    """
+    family_stats.mean["WindSpeed_[m/s]"] = [12.0, 4.0, 8.0]
+
+    figure = family_stats.explore(
+        x="WindSpeed_[m/s]", channel="TowerMx_[kNm]",
+        statistic="mean", kind="line", show=False,
+    )
+
+    trace = figure.data[0]
+    assert list(trace.x) == [4.0, 8.0, 12.0]
+    assert list(trace.y) == [20.0, 30.0, 10.0]
+    assert [row[0] for row in trace.customdata] == ["DLC13", "DLC14", "DLC12"]
+
+
+@pytest.mark.parametrize("kind", ["scatter", "bar", "line"])
+def test_plot_family_avg_wrapper_forwards_kind(family_stats, kind):
+    """Forward each supported plot kind through the compatibility wrapper.
+
+    Parameters
+    ----------
+    family_stats : FamilyAvg
+        Synthetic family result fixture.
+    kind : str
+        Plot kind passed through the legacy wrapper.
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    >>> # Run: pytest tests/test_family_avg_exploration.py -k wrapper_forwards
+    """
+    figure = plot_family_avg(
+        family_stats, channel="TowerMx_[kNm]", statistic="mean", kind=kind,
+    )
+
+    assert figure.data[0].type == ("bar" if kind == "bar" else "scatter")
+    if kind != "bar":
+        assert figure.data[0].mode == (
+            "lines+markers" if kind == "line" else "markers"
+        )
+
+
 @pytest.mark.parametrize(
     "kwargs,match",
     [
@@ -226,6 +325,7 @@ def test_show_control_and_result_immutability(family_stats, monkeypatch):
         ({"channel": "missing"}, "exactly one"),
         ({"x": "missing"}, "exactly one"),
         ({"x": None}, "x must"),
+        ({"kind": "pie"}, "kind"),
     ],
 )
 def test_invalid_arguments(family_stats, kwargs, match):

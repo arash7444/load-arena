@@ -213,6 +213,23 @@ fig = family_stats.explore(
 )
 ```
 
+`kind` accepts `"scatter"` (default), `"bar"`, or `"line"`, matching statistics
+exploration. Existing calls without `kind` remain unconnected marker plots.
+Scatter and bar retain stored family order. For line plots, a numeric channel
+selected through `x` is sorted in ascending x order while keeping values and
+metadata aligned; the categorical `x="Family"` axis retains stored family order.
+
+```python
+fig = family_stats.explore(
+    x="WSPgl._[m/s]",
+    channel="Aerot._[kW]",
+    statistic="mean",
+    plf=False,
+    kind="line",
+    show=False,
+)
+```
+
 The figure title identifies the statistic and whether the selected data is raw or
 PLF-adjusted. Hover text shows the family, value, exact channel, statistic, PLF
 status, averaging method, member count, and the basenames of files belonging to

@@ -66,6 +66,21 @@ def main() -> None:
     fig.show()
 
 
+    fig2 = family_stats.explore( 
+        x="WSPgl._[m/s]",
+        channel="Aerot._[kW]",
+        statistic="max",
+        plf=False, 
+        kind="scatter",
+        show=False,
+     )
+
+    fig2.update_layout(
+        plot_bgcolor="lightgray",  # Inside the axes
+        paper_bgcolor="white",    # Outside the axes
+    )
+    fig2.show()
+
 #### Family stat plots
     # fig = family_stats.explore(
     #     x="WSPgl._[m/s]",
@@ -103,12 +118,12 @@ def main() -> None:
         name="Family average",
     )
 
-    fig2 = plot(simulation_series, family_series, kind="scatter")
-    fig2.update_layout(
+    fig3 = plot(simulation_series, family_series, kind="scatter")
+    fig3.update_layout(
         plot_bgcolor="lightgray",  # Inside the axes
         paper_bgcolor="white",    # Outside the axes
     )
-    fig2.show()
+    fig3.show()
 
 
 

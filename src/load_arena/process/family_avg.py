@@ -110,7 +110,9 @@ class FamilyAvg:
 
     def explore(
         self, *, channel: str, statistic: Literal["mean", "std", "min", "max"],
-        x: str = "Family", plf: bool = False, show: bool = True,
+        x: str = "Family", plf: bool = False,
+        kind: Literal["scatter", "bar", "line"] = "scatter",
+        show: bool = True,
     ) -> "Figure":
         """Plot a stored family statistic without recalculating family averages.
 
@@ -124,6 +126,8 @@ class FamilyAvg:
             ``Family`` or an exact channel name from the selected table.
         plf : bool, default False
             Select the corresponding PLF-adjusted table when True.
+        kind : {"scatter", "bar", "line"}, default "scatter"
+            Plot type. Numeric lines sort by x; categorical lines keep family order.
         show : bool, default True
             Display the figure using Plotly's configured renderer.
 
@@ -135,7 +139,8 @@ class FamilyAvg:
         Examples
         --------
         >>> fig = family_stats.explore(
-        ...     channel="TowerMx_[kNm]", statistic="max", show=False
+        ...     channel="TowerMx_[kNm]", statistic="max",
+        ...     kind="line", show=False,
         ... )
         """
         from load_arena.visualization.common import plot
@@ -146,7 +151,7 @@ class FamilyAvg:
             x=x,
             plf=plf,
         )
-        figure = plot(series, kind="scatter")
+        figure = plot(series, kind=kind)
         if show:
             figure.show()
         return figure

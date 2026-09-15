@@ -331,6 +331,7 @@ def plot_family_avg(
     stats: "FamilyAvg", *, channel: str,
     statistic: Literal["mean", "std", "min", "max"],
     x: str = "Family", plf: bool = False,
+    kind: Literal["scatter", "bar", "line"] = "scatter",
 ) -> go.Figure:
     """Plot stored family-average values through the common plotting layer.
 
@@ -346,6 +347,8 @@ def plot_family_avg(
         ``Family`` or an exact numeric channel in the selected table.
     plf : bool, default False
         Select the PLF-adjusted statistic table when True.
+    kind : {"scatter", "bar", "line"}, default "scatter"
+        Plot type forwarded to the common plotting layer.
 
     Returns
     -------
@@ -355,10 +358,10 @@ def plot_family_avg(
     Examples
     --------
     >>> fig = plot_family_avg(
-    ...     family_stats, channel="TowerMx_[kNm]", statistic="max"
+    ...     family_stats, channel="TowerMx_[kNm]", statistic="max", kind="bar"
     ... )
     """
     series = family_avg_series(
         stats, channel=channel, statistic=statistic, x=x, plf=plf,
     )
-    return plot(series, kind="scatter")
+    return plot(series, kind=kind)
