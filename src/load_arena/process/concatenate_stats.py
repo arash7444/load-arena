@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING, Literal
 
 if TYPE_CHECKING:
     from plotly.graph_objects import Figure
+    from load_arena.visualization.common import PlotSeries
 from load_arena.data_reader import LoadArenaConfig
 from load_arena.data_reader import ReadHawc2
 from load_arena.data_reader import toDataFrame
@@ -31,6 +32,50 @@ class All_stats:
     max_plf: pd.DataFrame
     filename: list[str]
     family: list[str]
+
+    def series(
+        self, *, channel: str, statistic: Literal["mean", "std", "min", "max"],
+        x_channel: str | None = None,
+        x_statistic: Literal["mean", "std", "min", "max"] = "mean",
+        name: str = "Simulations",
+    ) -> "PlotSeries":
+        """Extract stored per-simulation values as a common plotting series.
+
+        Parameters
+        ----------
+        channel : str
+            Exact y-axis channel name, including units.
+        statistic : {"mean", "std", "min", "max"}
+            Raw per-simulation statistic for the y-axis.
+        x_channel : str or None, default None
+            Exact x-axis channel; None uses zero-based simulation positions.
+        x_statistic : {"mean", "std", "min", "max"}, default "mean"
+            Raw statistic for x_channel; unused when x_channel is None.
+        name : str, default "Simulations"
+            Legend label for the resulting series.
+
+        Returns
+        -------
+        PlotSeries
+            Values and full-path metadata extracted without recalculation.
+
+        Examples
+        --------
+        >>> series = stats.series(
+        ...     channel="Aerot._[kW]", statistic="max",
+        ...     x_channel="WSPgl._[m/s]", name="Simulations",
+        ... )
+        """
+        from load_arena.visualization.statistics_plots import statistics_series
+
+        return statistics_series(
+            self,
+            channel=channel,
+            statistic=statistic,
+            x_channel=x_channel,
+            x_statistic=x_statistic,
+            name=name,
+        )
 
     def explore(
         self, *, channel: str, statistic: Literal["mean", "std", "min", "max"],
@@ -65,12 +110,15 @@ class All_stats:
         --------
         >>> fig = stats.explore(channel="Aerot._[kW]", statistic="mean", show=False)
         """
-        from load_arena.visualization.statistics_plots import plot_statistics
+        from load_arena.visualization.common import plot
 
-        figure = plot_statistics(
-            self, channel=channel, statistic=statistic,
-            x_channel=x_channel, x_statistic=x_statistic, kind=kind,
+        series = self.series(
+            channel=channel,
+            statistic=statistic,
+            x_channel=x_channel,
+            x_statistic=x_statistic,
         )
+        figure = plot(series, kind=kind)
         if show:
             figure.show()
         return figure

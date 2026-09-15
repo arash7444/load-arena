@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Literal
 import pandas as pd
 import plotly.graph_objects as go
 
+from load_arena.visualization.common import PlotSeries, plot
+
 
 if TYPE_CHECKING:
     from load_arena.process.family_avg import FamilyAvg
@@ -163,7 +165,9 @@ def _plot_provenance(
     channel: str,
     statistic: str,
     plf: bool,
-) -> tuple[list[str], list[list[str]], list[str], list[int], list[list[str]]]:
+) -> tuple[
+    list[str], list[list[str]], list[str], list[int], list[list[str]], list[str | None]
+]:
     """Select family summaries and full-path metadata for plotted points.
 
     Parameters
@@ -184,8 +188,8 @@ def _plot_provenance(
     Returns
     -------
     tuple
-        Basename labels, full member paths, methods, member counts, and full
-        contributing paths in family row order.
+        Basename labels, full member paths, methods, member counts, full
+        contributing paths, and exact source paths in family row order.
 
     Examples
     --------
@@ -208,6 +212,7 @@ def _plot_provenance(
             ["unknown"] * len(table),
             [len(paths) for paths in fallback_paths],
             fallback_paths,
+            [None] * len(table),
         )
 
     labels = []
@@ -215,6 +220,7 @@ def _plot_provenance(
     methods = []
     member_counts = []
     contributing_paths = []
+    source_files = []
     for row, family in enumerate(families):
         matches = stats.provenance.loc[
             (stats.provenance["Family"] == family)
@@ -235,7 +241,90 @@ def _plot_provenance(
         labels.append(", ".join(Path(filename).name for filename in paths))
         methods.append(str(record["averaging_method"]))
         member_counts.append(int(record["member_count"]))
-    return labels, full_paths, methods, member_counts, contributing_paths
+        source_file = record.get("source_file")
+        source_files.append(None if pd.isna(source_file) else str(source_file))
+    return (
+        labels, full_paths, methods, member_counts, contributing_paths, source_files,
+    )
+
+
+def family_avg_series(
+    stats: "FamilyAvg", *, channel: str,
+    statistic: Literal["mean", "std", "min", "max"],
+    x: str = "Family", plf: bool = False, name: str = "Families",
+) -> PlotSeries:
+    """Convert stored family-average values into a common plotting series.
+
+    Parameters
+    ----------
+    stats : FamilyAvg
+        Stored family-average statistics and row-aligned metadata.
+    channel : str
+        Exact y-axis channel name, including units.
+    statistic : {"mean", "std", "min", "max"}
+        Stored statistic used for both numeric axes.
+    x : str, default "Family"
+        ``Family`` or an exact numeric channel in the selected table.
+    plf : bool, default False
+        Select the PLF-adjusted statistic table when True.
+    name : str, default "Families"
+        Legend label for the resulting series.
+
+    Returns
+    -------
+    PlotSeries
+        Stored family values with member and provenance metadata.
+
+    Examples
+    --------
+    >>> series = family_avg_series(
+    ...     family_stats, channel="TowerMx_[kNm]", statistic="max", x="Family"
+    ... )
+    """
+    table = _selected_table(stats, statistic, plf)
+    families = _family_values(stats, table)
+    y_values = _numeric_values(table, channel, "y")
+    if not isinstance(x, str):
+        raise ValueError("x must be 'Family' or an exact channel name.")
+    x_values = families if x == "Family" else _numeric_values(table, x, "x")
+    (
+        filename_labels,
+        full_paths,
+        methods,
+        member_counts,
+        contributing_paths,
+        source_files,
+    ) = (
+        _plot_provenance(stats, table, families, channel, statistic, plf)
+    )
+    plf_label = "yes" if plf else "no"
+    customdata = [
+        [
+            families[row], filename_labels[row], channel, statistic, plf_label,
+            full_paths[row], methods[row], member_counts[row], contributing_paths[row],
+            source_files[row], x,
+        ]
+        for row in range(len(table))
+    ]
+    mode_label = "PLF-adjusted" if plf else "raw"
+    x_title = "Family" if x == "Family" else f"{statistic}: {x}"
+    return PlotSeries(
+        x=x_values,
+        y=y_values,
+        name=name,
+        x_label=x_title,
+        y_label=f"{statistic}: {channel}",
+        title=f"{statistic}: {channel} ({mode_label})",
+        metadata=customdata,
+        hovertemplate=(
+            "Series: %{fullData.name}<br>Family: %{customdata[0]}"
+            "<br>Value: %{y}<br>Channel: %{customdata[2]}"
+            "<br>Statistic: %{customdata[3]}<br>PLF adjusted: %{customdata[4]}"
+            "<br>Averaging method: %{customdata[6]}"
+            "<br>Member count: %{customdata[7]}<br>Files: %{customdata[1]}<extra></extra>"
+        ),
+        x_kind="categorical" if x == "Family" else "numeric",
+    )
 
 
 def plot_family_avg(
@@ -243,7 +332,7 @@ def plot_family_avg(
     statistic: Literal["mean", "std", "min", "max"],
     x: str = "Family", plf: bool = False,
 ) -> go.Figure:
-    """Plot stored family-average channel values without recalculation.
+    """Plot stored family-average values through the common plotting layer.
 
     Parameters
     ----------
@@ -261,54 +350,15 @@ def plot_family_avg(
     Returns
     -------
     plotly.graph_objects.Figure
-        Marker-only family exploration figure without displaying it.
+        Marker-only family figure returned without display or recalculation.
 
     Examples
     --------
     >>> fig = plot_family_avg(
-    ...     family_stats, channel="TowerMx_[kNm]", statistic="max", x="Family"
+    ...     family_stats, channel="TowerMx_[kNm]", statistic="max"
     ... )
     """
-    table = _selected_table(stats, statistic, plf)
-    families = _family_values(stats, table)
-    y_values = _numeric_values(table, channel, "y")
-    if not isinstance(x, str):
-        raise ValueError("x must be 'Family' or an exact channel name.")
-    x_values = families if x == "Family" else _numeric_values(table, x, "x")
-    filename_labels, full_paths, methods, member_counts, contributing_paths = (
-        _plot_provenance(stats, table, families, channel, statistic, plf)
+    series = family_avg_series(
+        stats, channel=channel, statistic=statistic, x=x, plf=plf,
     )
-    plf_label = "yes" if plf else "no"
-    customdata = [
-        [
-            families[row], filename_labels[row], channel, statistic, plf_label,
-            full_paths[row], methods[row], member_counts[row], contributing_paths[row],
-        ]
-        for row in range(len(table))
-    ]
-
-    figure = go.Figure()
-    figure.add_scatter(
-        x=x_values,
-        y=y_values,
-        mode="markers",
-        name="Families",
-        marker={"color": "#636EFA", "opacity": 0.7, "size": 8},
-        customdata=customdata,
-        hovertemplate=(
-            "Family: %{customdata[0]}<br>Value: %{y}<br>Channel: %{customdata[2]}"
-            "<br>Statistic: %{customdata[3]}<br>PLF adjusted: %{customdata[4]}"
-            "<br>Averaging method: %{customdata[6]}"
-            "<br>Member count: %{customdata[7]}<br>Files: %{customdata[1]}<extra></extra>"
-        ),
-    )
-    mode_label = "PLF-adjusted" if plf else "raw"
-    x_title = "Family" if x == "Family" else f"{statistic}: {x}"
-    figure.update_layout(
-        title=f"{statistic}: {channel} ({mode_label})",
-        xaxis_title=x_title,
-        yaxis_title=f"{statistic}: {channel}",
-        template="plotly_white",
-        legend={"groupclick": "toggleitem"},
-    )
-    return figure
+    return plot(series, kind="scatter")

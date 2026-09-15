@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, List, Dict, Literal
 
 if TYPE_CHECKING:
     from plotly.graph_objects import Figure
+    from load_arena.visualization.common import PlotSeries
 console = Console()
 
 from load_arena.process.concatenate_stats import All_stats, concatenate_stats
@@ -65,6 +66,48 @@ class FamilyAvg:
     case_folder: List[str]
     provenance: pd.DataFrame = field(default_factory=pd.DataFrame)
 
+    def series(
+        self, *, channel: str, statistic: Literal["mean", "std", "min", "max"],
+        x: str = "Family", plf: bool = False, name: str = "Families",
+    ) -> "PlotSeries":
+        """Extract stored family-average values as a common plotting series.
+
+        Parameters
+        ----------
+        channel : str
+            Exact y-axis channel name, including units.
+        statistic : {"mean", "std", "min", "max"}
+            Stored family statistic to extract.
+        x : str, default "Family"
+            ``Family`` or an exact numeric channel in the selected table.
+        plf : bool, default False
+            Select the corresponding PLF-adjusted table when True.
+        name : str, default "Families"
+            Legend label for the resulting series.
+
+        Returns
+        -------
+        PlotSeries
+            Family values and full provenance extracted without recalculation.
+
+        Examples
+        --------
+        >>> series = family_stats.series(
+        ...     channel="Aerot._[kW]", statistic="mean",
+        ...     x="WSPgl._[m/s]", plf=False, name="Family average",
+        ... )
+        """
+        from load_arena.visualization.family_avg_plots import family_avg_series
+
+        return family_avg_series(
+            self,
+            channel=channel,
+            statistic=statistic,
+            x=x,
+            plf=plf,
+            name=name,
+        )
+
     def explore(
         self, *, channel: str, statistic: Literal["mean", "std", "min", "max"],
         x: str = "Family", plf: bool = False, show: bool = True,
@@ -95,11 +138,15 @@ class FamilyAvg:
         ...     channel="TowerMx_[kNm]", statistic="max", show=False
         ... )
         """
-        from load_arena.visualization.family_avg_plots import plot_family_avg
+        from load_arena.visualization.common import plot
 
-        figure = plot_family_avg(
-            self, channel=channel, statistic=statistic, x=x, plf=plf,
+        series = self.series(
+            channel=channel,
+            statistic=statistic,
+            x=x,
+            plf=plf,
         )
+        figure = plot(series, kind="scatter")
         if show:
             figure.show()
         return figure

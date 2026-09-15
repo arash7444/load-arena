@@ -8,6 +8,8 @@ from typing import TYPE_CHECKING, Literal
 import pandas as pd
 import plotly.graph_objects as go
 
+from load_arena.visualization.common import PlotSeries, plot
+
 
 if TYPE_CHECKING:
     from load_arena.process.concatenate_stats import All_stats
@@ -61,6 +63,75 @@ def _selected_values(stats: "All_stats", channel: str, statistic: str, axis: str
     return values
 
 
+def statistics_series(
+    stats: "All_stats", *, channel: str,
+    statistic: Literal["mean", "std", "min", "max"],
+    x_channel: str | None = None,
+    x_statistic: Literal["mean", "std", "min", "max"] = "mean",
+    name: str = "Simulations",
+) -> PlotSeries:
+    """Convert stored simulation statistics into a common plotting series.
+
+    Parameters
+    ----------
+    stats : All_stats
+        Raw statistics and their existing positional filename list.
+    channel : str
+        Exact y-axis channel name, including units.
+    statistic : {"mean", "std", "min", "max"}
+        Raw statistic for the y-axis.
+    x_channel : str or None, default None
+        Exact x-axis channel name; None uses zero-based simulation positions.
+    x_statistic : {"mean", "std", "min", "max"}, default "mean"
+        Raw x-axis statistic; unused when x_channel is None.
+    name : str, default "Simulations"
+        Legend label for the resulting series.
+
+    Returns
+    -------
+    PlotSeries
+        Stored values and row-level filename metadata without recalculation.
+
+    Examples
+    --------
+    >>> series = statistics_series(
+    ...     stats, channel="TowerMy_[kNm]", statistic="max",
+    ...     x_channel="WSPgl._[m/s]", x_statistic="mean",
+    ... )
+    """
+    values = _selected_values(stats, channel, statistic, "y")
+    x_values = (list(range(len(values))) if x_channel is None
+                else _selected_values(stats, x_channel, x_statistic, "x"))
+    x_title = "Simulation row (zero-based)" if x_channel is None else f"{x_statistic}: {x_channel}"
+    metadata = [
+        [
+            Path(str(stats.filename[row])).name,
+            row,
+            str(stats.filename[row]),
+            channel,
+            statistic,
+            x_channel,
+            x_statistic if x_channel is not None else None,
+        ]
+        for row in range(len(values))
+    ]
+    return PlotSeries(
+        x=x_values,
+        y=values,
+        name=name,
+        x_label=x_title,
+        y_label=f"{statistic}: {channel}",
+        title=f"{statistic}: {channel}",
+        metadata=metadata,
+        hovertemplate=(
+            "Series: %{fullData.name}<br>Simulation row: %{customdata[1]}"
+            "<br>File: %{customdata[0]}<br>Channel: %{customdata[3]}"
+            "<br>Statistic: %{customdata[4]}<br>X: %{x}<br>Y: %{y}<extra></extra>"
+        ),
+        x_kind="numeric",
+    )
+
+
 def plot_statistics(
     stats: "All_stats", *, channel: str,
     statistic: Literal["mean", "std", "min", "max"],
@@ -68,7 +139,7 @@ def plot_statistics(
     x_statistic: Literal["mean", "std", "min", "max"] = "mean",
     kind: Literal["scatter", "bar", "line"] = "scatter",
 ) -> go.Figure:
-    """Plot two stored channel statistics paired by simulation row position.
+    """Plot stored simulation statistics through the common plotting layer.
 
     Parameters
     ----------
@@ -83,49 +154,22 @@ def plot_statistics(
     x_statistic : {"mean", "std", "min", "max"}, default "mean"
         Raw x-axis statistic; unused when x_channel is None.
     kind : {"scatter", "bar", "line"}, default "scatter"
-        Plot type. Lines use ascending x order, preserving ties in input order.
-        No aggregation or family grouping is performed.
+        Plot type applied to the extracted series.
 
     Returns
     -------
     plotly.graph_objects.Figure
         Interactive figure without display, recalculation, or source mutation.
-        Invalid selections or nonfinite values raise ValueError.
 
     Examples
     --------
-    >>> fig = plot_statistics(stats, channel="TowerMy_[kNm]", statistic="max",
-    ...                       x_channel="WSPgl._[m/s]", x_statistic="mean")
+    >>> fig = plot_statistics(stats, channel="TowerMy_[kNm]", statistic="max")
     """
-    if not isinstance(kind, str) or kind not in ("scatter", "bar", "line"):
-        raise ValueError("kind must be one of: scatter, bar, line.")
-    values = _selected_values(stats, channel, statistic, "y")
-    x_values = (list(range(len(values))) if x_channel is None
-                else _selected_values(stats, x_channel, x_statistic, "x"))
-    x_title = "Simulation row (zero-based)" if x_channel is None else f"{x_statistic}: {x_channel}"
-    rows = list(range(len(values)))
-    if kind == "line":
-        rows.sort(key=lambda row: x_values[row])
-    trace_data = dict(
-        x=[x_values[row] for row in rows], y=[values[row] for row in rows], name="Simulations",
-        customdata=[
-            [Path(str(stats.filename[row])).name, row, str(stats.filename[row])]
-            for row in rows
-        ],
-        hovertemplate="Simulation row: %{customdata[1]}<br>File: %{customdata[0]}"
-        "<br>X: %{x}<br>Y: %{y}<extra></extra>",
+    series = statistics_series(
+        stats,
+        channel=channel,
+        statistic=statistic,
+        x_channel=x_channel,
+        x_statistic=x_statistic,
     )
-    figure = go.Figure()
-    if kind == "bar":
-        figure.add_bar(**trace_data, marker={"color": "#636EFA"})
-    else:
-        figure.add_scatter(
-            **trace_data, mode="markers" if kind == "scatter" else "lines+markers",
-            marker={"color": "#636EFA", "opacity": 0.7, "size": 8},
-        )
-    figure.update_layout(
-        title=f"{statistic}: {channel}", xaxis_title=x_title,
-        yaxis_title=f"{statistic}: {channel}", template="plotly_white",
-        legend={"groupclick": "toggleitem"},
-    )
-    return figure
+    return plot(series, kind=kind)

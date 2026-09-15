@@ -113,6 +113,54 @@ selected values raise `ValueError` without silently dropping rows.
 Exploration uses stored raw statistics; it neither rereads simulations nor changes
 the result tables. Existing `.mean`, `.std`, `.min`, and `.max` access is unchanged.
 
+## Combine stored results in one plot
+
+Convert calculated statistics and family averages to the common `PlotSeries`
+representation, then pass any number of series to the generic plotter:
+
+```python
+from load_arena import plot
+
+family_stats = uls.family_stats
+
+simulation_series = statistics.series(
+    channel="Aerot._[kW]",
+    statistic="max",
+    x_channel="WSPgl._[m/s]",
+    x_statistic="mean",
+    name="Simulations",
+)
+
+family_series = family_stats.series(
+    channel="Aerot._[kW]",
+    statistic="mean",
+    x="WSPgl._[m/s]",
+    plf=False,
+    name="Family average",
+)
+
+fig = plot(simulation_series, family_series, kind="scatter")
+fig.show()
+```
+
+`plot()` accepts `scatter`, `bar`, and `line`, returns a Plotly Figure, and does
+not display it automatically. Scatter and bar preserve each series' stored order.
+Line plots sort numeric x-values in ascending order and preserve categorical
+x-values in their stored order.
+
+Combined series may use different channels, statistics, units, or axis labels.
+When all series share an axis label or title, that description is retained. When
+they differ, the figure uses the neutral labels `X` or `Y` and the neutral title
+`Y`; customize these afterwards with `fig.update_layout(...)` when desired.
+
+`PlotSeries` and `plot` are importable from `load_arena`. A `PlotSeries` contains
+only already-calculated x/y values, labels, hover configuration, and row-aligned
+metadata. Simulation hover displays filename basenames while retaining full paths
+and row identity in Plotly `customdata`. Family hover displays member basenames,
+while full member paths, contributing paths, exact source paths when available,
+family identifiers, averaging methods, and PLF state remain in `customdata`.
+Neither `.series()` nor `plot()` rereads simulations or recalculates statistics.
+
 ## Explore family averages interactively
 
 `project.run_uls()` returns one `ULSStats` object and exposes the stored
