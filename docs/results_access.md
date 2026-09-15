@@ -5,6 +5,18 @@ root, using a YAML file with the analyses you want enabled. Each `run_*()` call
 calculates results and writes its configured CSV outputs; accessing the returned
 objects afterwards does not rerun the analysis.
 
+For an executable overview of the complete current capability, run:
+
+```bash
+uv run python demo/project/demo_load_arena.py
+```
+
+The demo covers both the high-level project API and direct access to result tables,
+metadata, provenance, retained rainflow cycles, public plotting helpers, and raw
+HAWC2 time-series data. It uses the illustrative configuration and fixtures in
+`demo/project`; its load factors, occurrences, and fatigue settings are examples,
+not a validated engineering campaign.
+
 ## Run the analyses
 
 ```python
