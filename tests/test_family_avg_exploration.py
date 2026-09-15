@@ -118,16 +118,212 @@ def test_plf_table_and_channel_x_selection(family_stats, statistic, offset):
     >>> # Run: pytest tests/test_family_avg_exploration.py -k plf_table
     """
     figure = family_stats.explore(
-        x="WindSpeed_[m/s]", channel="TowerMx_[kNm]",
-        statistic=statistic, plf=True, show=False,
+        x_channel="WindSpeed_[m/s]", x_statistic=statistic,
+        channel="TowerMx_[kNm]", statistic=statistic, plf=True, show=False,
     )
     trace = figure.data[0]
     assert list(trace.x) == [14.0 + offset, 18.0 + offset, 22.0 + offset]
     assert list(trace.y) == [110.0 + offset, 120.0 + offset, 130.0 + offset]
-    assert figure.layout.xaxis.title.text == f"{statistic}: WindSpeed_[m/s]"
+    assert figure.layout.xaxis.title.text == (
+        f"{statistic}: WindSpeed_[m/s] (PLF-adjusted)"
+    )
     assert "PLF-adjusted" in figure.layout.title.text
     assert "PLF adjusted: %{customdata[4]}" in trace.hovertemplate
     assert all(row[4] == "yes" for row in trace.customdata)
+
+
+@pytest.mark.parametrize(
+    "x_statistic,offset", [("mean", 0), ("std", 1), ("min", 2), ("max", 3)]
+)
+def test_independent_x_statistic_selection(family_stats, x_statistic, offset):
+    """Select the x statistic independently from the y statistic.
+
+    Parameters
+    ----------
+    family_stats : FamilyAvg
+        Synthetic family result fixture.
+    x_statistic : str
+        Statistic selected for the numeric x-axis.
+    offset : int
+        Expected fixture offset for the selected x statistic.
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    >>> # Run: pytest tests/test_family_avg_exploration.py -k independent_x
+    """
+    series = family_stats.series(
+        channel="TowerMx_[kNm]",
+        statistic="max",
+        x_channel="WindSpeed_[m/s]",
+        x_statistic=x_statistic,
+        plf=False,
+    )
+
+    assert list(series.x) == [4.0 + offset, 8.0 + offset, 12.0 + offset]
+    assert list(series.y) == [13.0, 23.0, 33.0]
+    assert series.x_label == f"{x_statistic}: WindSpeed_[m/s] (raw)"
+    assert all(row[11] == x_statistic for row in series.metadata)
+    assert all(row[12] == "no" for row in series.metadata)
+
+
+@pytest.mark.parametrize(
+    "plf,x_plf,expected_x,expected_mode",
+    [
+        (True, None, [14.0, 18.0, 22.0], "yes"),
+        (True, False, [4.0, 8.0, 12.0], "no"),
+        (False, True, [14.0, 18.0, 22.0], "yes"),
+    ],
+)
+def test_independent_x_plf_selection(
+    family_stats, plf, x_plf, expected_x, expected_mode,
+):
+    """Resolve default and explicit x PLF modes independently from y.
+
+    Parameters
+    ----------
+    family_stats : FamilyAvg
+        Synthetic family result fixture.
+    plf : bool
+        PLF mode selected for the y-axis.
+    x_plf : bool or None
+        Optional independent PLF mode selected for the x-axis.
+    expected_x : list[float]
+        Expected values from the resolved x table.
+    expected_mode : str
+        Expected Plotly metadata value for the resolved x PLF mode.
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    >>> # Run: pytest tests/test_family_avg_exploration.py -k independent_x_plf
+    """
+    figure = family_stats.explore(
+        channel="TowerMx_[kNm]",
+        statistic="max",
+        x_channel="WindSpeed_[m/s]",
+        x_statistic="mean",
+        plf=plf,
+        x_plf=x_plf,
+        show=False,
+    )
+
+    trace = figure.data[0]
+    assert list(trace.x) == expected_x
+    expected_y = [113.0, 123.0, 133.0] if plf else [13.0, 23.0, 33.0]
+    assert list(trace.y) == expected_y
+    assert all(row[12] == expected_mode for row in trace.customdata)
+    assert "X value: %{x}" in trace.hovertemplate
+    assert "X statistic: %{customdata[11]}" in trace.hovertemplate
+    assert "X PLF adjusted: %{customdata[12]}" in trace.hovertemplate
+
+
+def test_family_axis_ignores_x_only_options(family_stats):
+    """Ignore x statistic and PLF options when family labels form the x-axis.
+
+    Parameters
+    ----------
+    family_stats : FamilyAvg
+        Synthetic family result fixture.
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    >>> # Run: pytest tests/test_family_avg_exploration.py -k ignores_x_only
+    """
+    figure = family_stats.explore(
+        channel="TowerMx_[kNm]",
+        statistic="mean",
+        x_channel=None,
+        x_statistic="unsupported",
+        x_plf="unsupported",
+        show=False,
+    )
+
+    trace = figure.data[0]
+    assert list(trace.x) == ["DLC12", "DLC13", "DLC14"]
+    assert all(list(row[10:]) == ["Family", None, None] for row in trace.customdata)
+    assert "X statistic:" not in trace.hovertemplate
+
+
+def test_removed_x_keyword_is_rejected(family_stats):
+    """Reject the removed x keyword across family plotting entry points.
+
+    Parameters
+    ----------
+    family_stats : FamilyAvg
+        Synthetic family result fixture.
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    >>> # Run: pytest tests/test_family_avg_exploration.py -k removed_x
+    """
+    with pytest.raises(TypeError):
+        family_stats.series(
+            channel="TowerMx_[kNm]", statistic="mean", x="WindSpeed_[m/s]",
+        )
+    with pytest.raises(TypeError):
+        family_stats.explore(
+            channel="TowerMx_[kNm]", statistic="mean", x="WindSpeed_[m/s]",
+        )
+    with pytest.raises(TypeError):
+        plot_family_avg(
+            family_stats,
+            channel="TowerMx_[kNm]",
+            statistic="mean",
+            x="WindSpeed_[m/s]",
+        )
+
+
+@pytest.mark.parametrize(
+    "kwargs,match",
+    [
+        ({"x_statistic": "median"}, "statistic"),
+        ({"x_plf": 1}, "plf"),
+    ],
+)
+def test_invalid_numeric_x_table_options(family_stats, kwargs, match):
+    """Reject invalid x table options when a numeric x-channel uses them.
+
+    Parameters
+    ----------
+    family_stats : FamilyAvg
+        Synthetic family result fixture.
+    kwargs : dict
+        Invalid independent x-axis selection.
+    match : str
+        Expected validation message fragment.
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    >>> # Run: pytest tests/test_family_avg_exploration.py -k numeric_x_table_options
+    """
+    arguments = {
+        "channel": "TowerMx_[kNm]",
+        "statistic": "mean",
+        "x_channel": "WindSpeed_[m/s]",
+        "show": False,
+    }
+    arguments.update(kwargs)
+    with pytest.raises(ValueError, match=match):
+        family_stats.explore(**arguments)
 
 
 def test_hover_uses_basenames_and_retains_full_paths(family_stats):
@@ -167,7 +363,9 @@ def test_hover_uses_basenames_and_retains_full_paths(family_stats):
     provenance_before = family_stats.provenance.copy(deep=True)
 
     figure = family_stats.explore(
-        channel="TowerMx_[kNm]", statistic="max", show=False,
+        channel="TowerMx_[kNm]", statistic="max",
+        x_channel="WindSpeed_[m/s]", x_statistic="mean", x_plf=True,
+        show=False,
     )
     first = figure.data[0].customdata[0]
     assert first[0] == "DLC12"
@@ -277,7 +475,7 @@ def test_line_kind_sorts_numeric_x_with_aligned_family_metadata(family_stats):
     family_stats.mean["WindSpeed_[m/s]"] = [12.0, 4.0, 8.0]
 
     figure = family_stats.explore(
-        x="WindSpeed_[m/s]", channel="TowerMx_[kNm]",
+        x_channel="WindSpeed_[m/s]", channel="TowerMx_[kNm]",
         statistic="mean", kind="line", show=False,
     )
 
@@ -307,10 +505,19 @@ def test_plot_family_avg_wrapper_forwards_kind(family_stats, kind):
     >>> # Run: pytest tests/test_family_avg_exploration.py -k wrapper_forwards
     """
     figure = plot_family_avg(
-        family_stats, channel="TowerMx_[kNm]", statistic="mean", kind=kind,
+        family_stats,
+        channel="TowerMx_[kNm]",
+        statistic="mean",
+        x_channel="WindSpeed_[m/s]",
+        x_statistic="std",
+        plf=True,
+        x_plf=False,
+        kind=kind,
     )
 
     assert figure.data[0].type == ("bar" if kind == "bar" else "scatter")
+    assert list(figure.data[0].x) == [5.0, 9.0, 13.0]
+    assert list(figure.data[0].y) == [110.0, 120.0, 130.0]
     if kind != "bar":
         assert figure.data[0].mode == (
             "lines+markers" if kind == "line" else "markers"
@@ -323,8 +530,8 @@ def test_plot_family_avg_wrapper_forwards_kind(family_stats, kind):
         ({"statistic": "median"}, "statistic"),
         ({"plf": 1}, "plf"),
         ({"channel": "missing"}, "exactly one"),
-        ({"x": "missing"}, "exactly one"),
-        ({"x": None}, "x must"),
+        ({"x_channel": "missing"}, "exactly one"),
+        ({"x_channel": 42}, "x_channel"),
         ({"kind": "pie"}, "kind"),
     ],
 )
@@ -417,6 +624,6 @@ def test_invalid_numeric_values(family_stats, axis, value):
     family_stats.mean.loc[family_stats.mean.index[1], selected] = value
     with pytest.raises(ValueError, match=f"{axis}-axis"):
         family_stats.explore(
-            x="WindSpeed_[m/s]", channel="TowerMx_[kNm]",
+            x_channel="WindSpeed_[m/s]", channel="TowerMx_[kNm]",
             statistic="mean", show=False,
         )

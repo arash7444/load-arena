@@ -68,7 +68,9 @@ class FamilyAvg:
 
     def series(
         self, *, channel: str, statistic: Literal["mean", "std", "min", "max"],
-        x: str = "Family", plf: bool = False, name: str = "Families",
+        x_channel: str | None = None,
+        x_statistic: Literal["mean", "std", "min", "max"] = "mean",
+        plf: bool = False, x_plf: bool | None = None, name: str = "Families",
     ) -> "PlotSeries":
         """Extract stored family-average values as a common plotting series.
 
@@ -78,10 +80,15 @@ class FamilyAvg:
             Exact y-axis channel name, including units.
         statistic : {"mean", "std", "min", "max"}
             Stored family statistic to extract.
-        x : str, default "Family"
-            ``Family`` or an exact numeric channel in the selected table.
+        x_channel : str or None, default None
+            Exact numeric x-axis channel; None uses stored family labels.
+        x_statistic : {"mean", "std", "min", "max"}, default "mean"
+            Stored statistic for x_channel; unused when x_channel is None.
         plf : bool, default False
-            Select the corresponding PLF-adjusted table when True.
+            Select the corresponding PLF-adjusted y-axis table when True.
+        x_plf : bool or None, default None
+            Select the PLF-adjusted x-axis table when True or the raw table
+            when False. None follows plf. Unused when x_channel is None.
         name : str, default "Families"
             Legend label for the resulting series.
 
@@ -94,7 +101,8 @@ class FamilyAvg:
         --------
         >>> series = family_stats.series(
         ...     channel="Aerot._[kW]", statistic="mean",
-        ...     x="WSPgl._[m/s]", plf=False, name="Family average",
+        ...     x_channel="WSPgl._[m/s]", x_statistic="mean",
+        ...     plf=False, x_plf=None, name="Family average",
         ... )
         """
         from load_arena.visualization.family_avg_plots import family_avg_series
@@ -103,14 +111,18 @@ class FamilyAvg:
             self,
             channel=channel,
             statistic=statistic,
-            x=x,
+            x_channel=x_channel,
+            x_statistic=x_statistic,
             plf=plf,
+            x_plf=x_plf,
             name=name,
         )
 
     def explore(
         self, *, channel: str, statistic: Literal["mean", "std", "min", "max"],
-        x: str = "Family", plf: bool = False,
+        x_channel: str | None = None,
+        x_statistic: Literal["mean", "std", "min", "max"] = "mean",
+        plf: bool = False, x_plf: bool | None = None,
         kind: Literal["scatter", "bar", "line"] = "scatter",
         show: bool = True,
     ) -> "Figure":
@@ -122,10 +134,15 @@ class FamilyAvg:
             Exact y-axis channel name, including units.
         statistic : {"mean", "std", "min", "max"}
             Stored family statistic to explore.
-        x : str, default "Family"
-            ``Family`` or an exact channel name from the selected table.
+        x_channel : str or None, default None
+            Exact numeric x-axis channel; None uses stored family labels.
+        x_statistic : {"mean", "std", "min", "max"}, default "mean"
+            Stored statistic for x_channel; unused when x_channel is None.
         plf : bool, default False
-            Select the corresponding PLF-adjusted table when True.
+            Select the corresponding PLF-adjusted y-axis table when True.
+        x_plf : bool or None, default None
+            Select the PLF-adjusted x-axis table when True or the raw table
+            when False. None follows plf. Unused when x_channel is None.
         kind : {"scatter", "bar", "line"}, default "scatter"
             Plot type. Numeric lines sort by x; categorical lines keep family order.
         show : bool, default True
@@ -140,6 +157,7 @@ class FamilyAvg:
         --------
         >>> fig = family_stats.explore(
         ...     channel="TowerMx_[kNm]", statistic="max",
+        ...     x_channel="WindSpeed_[m/s]", x_statistic="mean",
         ...     kind="line", show=False,
         ... )
         """
@@ -148,8 +166,10 @@ class FamilyAvg:
         series = self.series(
             channel=channel,
             statistic=statistic,
-            x=x,
+            x_channel=x_channel,
+            x_statistic=x_statistic,
             plf=plf,
+            x_plf=x_plf,
         )
         figure = plot(series, kind=kind)
         if show:

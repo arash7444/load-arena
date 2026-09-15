@@ -3,7 +3,7 @@ project:
 
 data:
   software: HAWC2
-  results_path: ../../tests/h2_res/dlc13
+  results_path: ../../tests/h2_res/int_res
 
 analysis:
   statistics:

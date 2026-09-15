@@ -251,7 +251,9 @@ def _plot_provenance(
 def family_avg_series(
     stats: "FamilyAvg", *, channel: str,
     statistic: Literal["mean", "std", "min", "max"],
-    x: str = "Family", plf: bool = False, name: str = "Families",
+    x_channel: str | None = None,
+    x_statistic: Literal["mean", "std", "min", "max"] = "mean",
+    plf: bool = False, x_plf: bool | None = None, name: str = "Families",
 ) -> PlotSeries:
     """Convert stored family-average values into a common plotting series.
 
@@ -262,11 +264,16 @@ def family_avg_series(
     channel : str
         Exact y-axis channel name, including units.
     statistic : {"mean", "std", "min", "max"}
-        Stored statistic used for both numeric axes.
-    x : str, default "Family"
-        ``Family`` or an exact numeric channel in the selected table.
+        Stored statistic used for the y-axis.
+    x_channel : str or None, default None
+        Exact numeric x-axis channel; None uses stored family labels.
+    x_statistic : {"mean", "std", "min", "max"}, default "mean"
+        Stored statistic for x_channel; unused when x_channel is None.
     plf : bool, default False
-        Select the PLF-adjusted statistic table when True.
+        Select the PLF-adjusted y-axis table when True.
+    x_plf : bool or None, default None
+        Select the PLF-adjusted x-axis table when True or the raw table when
+        False. None follows plf. Unused when x_channel is None.
     name : str, default "Families"
         Legend label for the resulting series.
 
@@ -278,15 +285,23 @@ def family_avg_series(
     Examples
     --------
     >>> series = family_avg_series(
-    ...     family_stats, channel="TowerMx_[kNm]", statistic="max", x="Family"
+    ...     family_stats, channel="TowerMx_[kNm]", statistic="max",
+    ...     x_channel="WindSpeed_[m/s]", x_statistic="mean",
     ... )
     """
-    table = _selected_table(stats, statistic, plf)
-    families = _family_values(stats, table)
-    y_values = _numeric_values(table, channel, "y")
-    if not isinstance(x, str):
-        raise ValueError("x must be 'Family' or an exact channel name.")
-    x_values = families if x == "Family" else _numeric_values(table, x, "x")
+    y_table = _selected_table(stats, statistic, plf)
+    families = _family_values(stats, y_table)
+    y_values = _numeric_values(y_table, channel, "y")
+    if x_channel is None:
+        x_values = families
+        effective_x_plf = None
+    else:
+        if not isinstance(x_channel, str):
+            raise ValueError("x_channel must be None or an exact channel name.")
+        effective_x_plf = plf if x_plf is None else x_plf
+        x_table = _selected_table(stats, x_statistic, effective_x_plf)
+        _family_values(stats, x_table)
+        x_values = _numeric_values(x_table, x_channel, "x")
     (
         filename_labels,
         full_paths,
@@ -295,19 +310,34 @@ def family_avg_series(
         contributing_paths,
         source_files,
     ) = (
-        _plot_provenance(stats, table, families, channel, statistic, plf)
+        _plot_provenance(stats, y_table, families, channel, statistic, plf)
     )
     plf_label = "yes" if plf else "no"
+    metadata_x_channel = "Family" if x_channel is None else x_channel
+    metadata_x_statistic = None if x_channel is None else x_statistic
+    metadata_x_plf = (
+        None if effective_x_plf is None else ("yes" if effective_x_plf else "no")
+    )
     customdata = [
         [
             families[row], filename_labels[row], channel, statistic, plf_label,
             full_paths[row], methods[row], member_counts[row], contributing_paths[row],
-            source_files[row], x,
+            source_files[row], metadata_x_channel, metadata_x_statistic, metadata_x_plf,
         ]
-        for row in range(len(table))
+        for row in range(len(y_table))
     ]
     mode_label = "PLF-adjusted" if plf else "raw"
-    x_title = "Family" if x == "Family" else f"{statistic}: {x}"
+    if x_channel is None:
+        x_title = "Family"
+        x_hover = ""
+    else:
+        x_mode_label = "PLF-adjusted" if effective_x_plf else "raw"
+        x_title = f"{x_statistic}: {x_channel} ({x_mode_label})"
+        x_hover = (
+            "<br>X value: %{x}<br>X channel: %{customdata[10]}"
+            "<br>X statistic: %{customdata[11]}"
+            "<br>X PLF adjusted: %{customdata[12]}"
+        )
     return PlotSeries(
         x=x_values,
         y=y_values,
@@ -321,16 +351,19 @@ def family_avg_series(
             "<br>Value: %{y}<br>Channel: %{customdata[2]}"
             "<br>Statistic: %{customdata[3]}<br>PLF adjusted: %{customdata[4]}"
             "<br>Averaging method: %{customdata[6]}"
-            "<br>Member count: %{customdata[7]}<br>Files: %{customdata[1]}<extra></extra>"
+            "<br>Member count: %{customdata[7]}<br>Files: %{customdata[1]}"
+            f"{x_hover}<extra></extra>"
         ),
-        x_kind="categorical" if x == "Family" else "numeric",
+        x_kind="categorical" if x_channel is None else "numeric",
     )
 
 
 def plot_family_avg(
     stats: "FamilyAvg", *, channel: str,
     statistic: Literal["mean", "std", "min", "max"],
-    x: str = "Family", plf: bool = False,
+    x_channel: str | None = None,
+    x_statistic: Literal["mean", "std", "min", "max"] = "mean",
+    plf: bool = False, x_plf: bool | None = None,
     kind: Literal["scatter", "bar", "line"] = "scatter",
 ) -> go.Figure:
     """Plot stored family-average values through the common plotting layer.
@@ -342,11 +375,16 @@ def plot_family_avg(
     channel : str
         Exact y-axis channel name, including units.
     statistic : {"mean", "std", "min", "max"}
-        Stored statistic used for both numeric axes.
-    x : str, default "Family"
-        ``Family`` or an exact numeric channel in the selected table.
+        Stored statistic used for the y-axis.
+    x_channel : str or None, default None
+        Exact numeric x-axis channel; None uses stored family labels.
+    x_statistic : {"mean", "std", "min", "max"}, default "mean"
+        Stored statistic for x_channel; unused when x_channel is None.
     plf : bool, default False
-        Select the PLF-adjusted statistic table when True.
+        Select the PLF-adjusted y-axis table when True.
+    x_plf : bool or None, default None
+        Select the PLF-adjusted x-axis table when True or the raw table when
+        False. None follows plf. Unused when x_channel is None.
     kind : {"scatter", "bar", "line"}, default "scatter"
         Plot type forwarded to the common plotting layer.
 
@@ -358,10 +396,17 @@ def plot_family_avg(
     Examples
     --------
     >>> fig = plot_family_avg(
-    ...     family_stats, channel="TowerMx_[kNm]", statistic="max", kind="bar"
+    ...     family_stats, channel="TowerMx_[kNm]", statistic="max",
+    ...     x_channel="WindSpeed_[m/s]", kind="bar",
     ... )
     """
     series = family_avg_series(
-        stats, channel=channel, statistic=statistic, x=x, plf=plf,
+        stats,
+        channel=channel,
+        statistic=statistic,
+        x_channel=x_channel,
+        x_statistic=x_statistic,
+        plf=plf,
+        x_plf=x_plf,
     )
     return plot(series, kind=kind)

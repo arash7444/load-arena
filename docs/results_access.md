@@ -134,7 +134,8 @@ simulation_series = statistics.series(
 family_series = family_stats.series(
     channel="Aerot._[kW]",
     statistic="mean",
-    x="WSPgl._[m/s]",
+    x_channel="WSPgl._[m/s]",
+    x_statistic="mean",
     plf=False,
     name="Family average",
 )
@@ -201,27 +202,51 @@ fig = family_stats.explore(
 )
 ```
 
-The `x` argument can instead name another exact channel. Both numeric axes use
-the same selected statistic and PLF mode and remain aligned by stored family row:
+Use `x_channel` to select another exact channel and `x_statistic` to choose its
+stored statistic independently from y. `x_statistic` defaults to `"mean"`.
+The y-axis continues to use `statistic` and `plf`; both axes remain aligned by
+stored family row even when their DataFrame index labels differ:
 
 ```python
 fig = family_stats.explore(
-    x="WindSpeed_[m/s]",
+    x_channel="WindSpeed_[m/s]",
+    x_statistic="mean",
     channel="TowerMx_[kNm]",
-    statistic="mean",
+    statistic="max",
     plf=False,
 )
 ```
 
-`kind` accepts `"scatter"` (default), `"bar"`, or `"line"`, matching statistics
-exploration. Existing calls without `kind` remain unconnected marker plots.
-Scatter and bar retain stored family order. For line plots, a numeric channel
-selected through `x` is sorted in ascending x order while keeping values and
-metadata aligned; the categorical `x="Family"` axis retains stored family order.
+By default, `x_plf=None` makes the x-axis follow the y-axis `plf` setting. Set
+`x_plf=True` or `False` to select the PLF-adjusted or raw x table independently:
 
 ```python
 fig = family_stats.explore(
-    x="WSPgl._[m/s]",
+    x_channel="WindSpeed_[m/s]",
+    x_statistic="mean",
+    x_plf=False,
+    channel="TowerMx_[kNm]",
+    statistic="max",
+    plf=True,
+)
+```
+
+When `x_channel=None`, the x-axis uses stored family labels and ignores
+`x_statistic` and `x_plf`. The former `x=` keyword is no longer accepted. This
+`channel`/`statistic` and `x_channel`/`x_statistic` convention is the standard for
+future result plotting APIs; `plf` and `x_plf` remain specific to `FamilyAvg`.
+
+`kind` accepts `"scatter"` (default), `"bar"`, or `"line"`, matching statistics
+exploration. Existing calls without `kind` remain unconnected marker plots.
+Scatter and bar retain stored family order. For line plots, a numeric channel
+selected through `x_channel` is sorted in ascending x order while keeping values
+and metadata aligned; the categorical `x_channel=None` axis retains stored family
+order.
+
+```python
+fig = family_stats.explore(
+    x_channel="WSPgl._[m/s]",
+    x_statistic="mean",
     channel="Aerot._[kW]",
     statistic="mean",
     plf=False,

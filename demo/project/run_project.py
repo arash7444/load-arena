@@ -67,7 +67,8 @@ def main() -> None:
 
 
     fig2 = family_stats.explore( 
-        x="WSPgl._[m/s]",
+        x_channel="WSPgl._[m/s]",
+        x_statistic="mean",
         channel="Aerot._[kW]",
         statistic="max",
         plf=False, 
@@ -81,9 +82,20 @@ def main() -> None:
     )
     fig2.show()
 
+    fig10 =family_stats.explore(
+    x_channel="WSPgl._[m/s]",
+    x_statistic="mean",
+    x_plf=True,
+    channel="Aerot._[kW]",
+    statistic="max",
+    plf=True,
+    )
+    fig10.show()
+
 #### Family stat plots
     # fig = family_stats.explore(
-    #     x="WSPgl._[m/s]",
+    #     x_channel="WSPgl._[m/s]",
+    #     x_statistic="mean",
     #     channel="Aerot._[kW]",
     #     statistic="mean",
     #     plf=False,
@@ -113,7 +125,8 @@ def main() -> None:
     family_series = family_stats.series(
         channel="Aerot._[kW]",
         statistic="mean",
-        x="WSPgl._[m/s]",
+        x_channel="WSPgl._[m/s]",
+        x_statistic="mean",
         plf=False,
         name="Family average",
     )

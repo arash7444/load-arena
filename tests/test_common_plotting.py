@@ -149,7 +149,8 @@ def test_combines_statistics_and_family_average_without_recalculation(monkeypatc
     family_series = family_stats.series(
         channel="Aerot._[kW]",
         statistic="mean",
-        x="WSPgl._[m/s]",
+        x_channel="WSPgl._[m/s]",
+        x_statistic="mean",
         plf=False,
         name="Family average",
     )
@@ -168,7 +169,7 @@ def test_combines_statistics_and_family_average_without_recalculation(monkeypatc
     ]
     assert "Channel: %{customdata[3]}" in figure.data[0].hovertemplate
     assert "Channel: %{customdata[2]}" in figure.data[1].hovertemplate
-    assert figure.layout.xaxis.title.text == "mean: WSPgl._[m/s]"
+    assert figure.layout.xaxis.title.text == "X"
     assert figure.layout.yaxis.title.text == "Y"
     assert figure.layout.title.text == "Y"
     for name, value in vars(statistics_before).items():
