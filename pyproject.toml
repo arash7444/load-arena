@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "load_arena"
-version = "0.2.0"
+version = "1.0.0"
 description = "Load Arena is a Python toolkit for post-processing and comparing wind turbine aeroelastic simulation results."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -12,18 +12,23 @@ requires-python = ">=3.10"
 dependencies = [
     "numpy",
     "plotly",
-    "seaborn",
     "pandas",
     "matplotlib",
     "rich",
     "scipy",
     "xarray",
-    "openpyxl",
     "numba",
     "scipp",
     "pydantic>=2.13.5",
     "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+ai = [
     "google-genai>=2.20.0",
+]
+demo = [
+    "seaborn",
 ]
 
 [dependency-groups]

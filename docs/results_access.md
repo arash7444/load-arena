@@ -5,6 +5,10 @@ root, using a YAML file with the analyses you want enabled. Each `run_*()` call
 calculates results and writes its configured CSV outputs; accessing the returned
 objects afterwards does not rerun the analysis.
 
+For YAML structure, path resolution, channel selection, and analysis settings,
+start with the [project configuration guide](project_configuration.md). The
+[documentation index](README.md) links all current user guides.
+
 For an executable overview of the complete current capability, run:
 
 ```bash

@@ -1,8 +1,13 @@
 """Demonstrate LoadArena's current public workflows in one executable script."""
 
+from contextlib import redirect_stdout
+from io import StringIO
 from pathlib import Path
 
 import plotly.express as px
+from rich.console import Console
+from rich.markdown import Markdown
+from rich.traceback import install
 
 from load_arena import LoadArenaProject, PlotSeries, plot
 from load_arena.data_reader import read_hawc2_flex
@@ -17,13 +22,9 @@ from load_arena.visualization import (
     plot_rainflow_range_spectrum,
 )
 
-
-from rich.markdown import Markdown
-from rich.console import Console
-from rich.traceback import install
-
 install()
-console = Console()
+console = Console(markup=False)
+
 
 def main() -> None:
     """Run the complete LoadArena capability demo against its adjacent project.
@@ -49,17 +50,14 @@ def main() -> None:
     wind_speed_channel = "WSPgl._[m/s]"
     time_channel = "Time_[s]"
 
-    # ------------------------------------------------------------------
-    # Load project
-    # ------------------------------------------------------------------
     console.print(Markdown("# Load project"))
-    config_path = Path(__file__).with_name("project.yaml") # path to project.yaml file
-    project = LoadArenaProject.from_yaml(config_path) # Load project from yaml file
+    config_path = Path(__file__).with_name("project.yaml")
+    project = LoadArenaProject.from_yaml(config_path)
 
-    console.print(f"Project: {project.config.project.name}") # Project name
-    console.print(f"Configuration: {project.source_path}") # Configuration path
-    console.print(f"Simulation results: {project.config.data.results_path}") # Simulation results main path 
-    console.print(f"Output directory: {project.config.output.directory}") # Output directory
+    console.print(f"Project: {project.config.project.name}")
+    console.print(f"Configuration: {project.source_path}")
+    console.print(f"Simulation results: {project.config.data.results_path}")
+    console.print(f"Output directory: {project.config.output.directory}")
     console.print(f"Simulation software: {project.config.data.software}")
     console.print(
         "Enabled analyses:",
@@ -70,21 +68,21 @@ def main() -> None:
         },
     )
 
-    # ------------------------------------------------------------------
-    # Statistics
-    # ------------------------------------------------------------------
     console.print(Markdown("# Statistics"))
     statistics = project.run_statistics()
-    console.print(f"Available simulations: {len(statistics.filename)}") # Number of simulations
-    console.print("First simulation files:") # First 3 simulation files
-    console.print(*statistics.filename[:3], sep="\n") # this is how you access to simulation file names
-    console.print(f"Available channels ({len(statistics.mean.columns)} total):") # Number of channels
-    console.print(statistics.mean.columns.tolist())
+    console.print(f"Available simulations: {len(statistics.filename)}")
+    console.print("First simulation files:")
+    console.print(
+        *(Path(filename).name for filename in statistics.filename[:3]),
+        sep="\n",
+    )
+    console.print(f"Available channels: {len(statistics.mean.columns)}")
+    console.print("First 10 channels:", statistics.mean.columns.tolist()[:10])
 
     for statistic_name in ("mean", "std", "min", "max"):
-        table = getattr(statistics, statistic_name) # this is how you access to statistics dataframe (Get a named attribute from an object)
-        console.print(f"\n{statistic_name} values for {load_channel}:") 
-        console.print(table[load_channel].head(3)) # the statistics of load_channel
+        table = getattr(statistics, statistic_name)
+        console.print(f"\n{statistic_name} values for {load_channel}:")
+        console.print(table[load_channel].head(3))
 
     console.print("\nRaw and standalone PLF-adjusted statistics:")
     console.print(
@@ -101,8 +99,7 @@ def main() -> None:
         "match. Statistics plotting intentionally has no x_plf option."
     )
 
-    # Plot 1: Default x uses the stored simulation row positions. Constructing with
-    # show=False is useful when a caller wants to customize before display.
+    # ``show=False`` lets callers customize a returned figure before display.
     statistics_scatter = statistics.explore(
         channel=load_channel,
         statistic="max",
@@ -113,30 +110,23 @@ def main() -> None:
     statistics_scatter.show()
 
 
-    # Plot 2: similar to plot above, but with file names on x-axis instead of simulation row positions
-    statistics_scatter = statistics.explore(
+    # Display basenames while retaining full paths in the result and custom data.
+    statistics_by_file = statistics.explore(
         channel=load_channel,
         statistic="max",
         kind="scatter",
         show=False,
     )
-
-    # here, we are updating the x-axis to show file names instead of simulation row positions
-    statistics_scatter.update_traces(
+    statistics_by_file.update_traces(
         x=[Path(filename).name for filename in statistics.filename],
     )
+    statistics_by_file.update_layout(xaxis_title="Simulation file")
+    statistics_by_file.show()
 
-    statistics_scatter.update_layout(
-        xaxis_title="Simulation file",
-    )
-
-    statistics_scatter.show()
-
-
-    # Plot 3: bar plot
     statistics_bar = statistics.explore(
         channel=load_channel,
         statistic="max",
+        x_channel=wind_speed_channel,
         x_statistic="mean",
         kind="bar",
         show=False,
@@ -153,17 +143,14 @@ def main() -> None:
     )
     statistics_line.show()
 
-    # ------------------------------------------------------------------
-    # Family statistics
-    # ------------------------------------------------------------------
-    console.print("\n=== Family statistics ===")
+    console.print(Markdown("# Family statistics"))
     # ULS retains the exact FamilyAvg object used by its calculation, so no
     # separate family-statistics calculation is necessary.
     uls = project.run_uls()
-    family_statistics = uls.family_stats 
+    family_statistics = uls.family_stats
 
     console.print("Family identifiers:")
-    console.print(family_statistics.family_name) # list of Family numbers 
+    console.print(family_statistics.family_name)
     for statistic_name in ("mean", "std", "min", "max"):
         raw_table = getattr(family_statistics, statistic_name)
         plf_table = getattr(family_statistics, f"{statistic_name}_plf")
@@ -172,7 +159,6 @@ def main() -> None:
         console.print(f"PLF-adjusted family {statistic_name}:")
         console.print(plf_table[["Family", load_channel]].head(3))
 
-    
     family_provenance = family_statistics.provenance.loc[
         family_statistics.provenance["channel"] == load_channel,
         [
@@ -186,7 +172,7 @@ def main() -> None:
             "contributing_files",
             "source_file",
         ],
-    ] # 
+    ]
     console.print("\nFamily provenance sample:")
     console.print(family_provenance.head(6))
     console.print(
@@ -213,9 +199,6 @@ def main() -> None:
         channel=load_channel,
         statistic="max",
         plf=True,
-        # x_channel=wind_speed_channel,
-        # x_statistic="mean",
-        # x_plf=False,
         kind="bar",
         show=False,
     )
@@ -233,10 +216,7 @@ def main() -> None:
     )
     family_line.show()
 
-    # ------------------------------------------------------------------
-    # Combined PlotSeries visualization
-    # ------------------------------------------------------------------
-    print("\n=== Combined PlotSeries visualization ===")
+    console.print(Markdown("# Combined PlotSeries visualization"))
     simulation_series = statistics.series(
         channel=load_channel,
         statistic="max",
@@ -261,10 +241,7 @@ def main() -> None:
     combined_figure = plot(simulation_series, family_series, kind="scatter")
     combined_figure.show()
 
-    # ------------------------------------------------------------------
-    # Ultimate loads
-    # ------------------------------------------------------------------
-    console.print("\n=== Ultimate loads ===")
+    console.print(Markdown("# Ultimate loads"))
     uls_columns = [
         f"{side}_{load_channel}{suffix}"
         for side in ("max", "min", "AbsMax")
@@ -291,15 +268,12 @@ def main() -> None:
         ]
     )
 
-    # ------------------------------------------------------------------
-    # Fatigue loads
-    # ------------------------------------------------------------------
-    console.print("\n=== Fatigue loads ===")
+    console.print(Markdown("# Fatigue loads"))
     fls = project.run_fls()
     console.print(f"Rainflow method: {fls.method}")
     console.print(f"Campaign reference cycles: {fls.n_ref}")
-    console.print(f"Available fatigue channels ({len(fls.channels)} total):")
-    console.print(list(fls.channels))
+    console.print(f"Available fatigue channels: {len(fls.channels)}")
+    console.print("First 10 fatigue channels:", list(fls.channels)[:10])
 
     fatigue_channel = fls.channels[load_channel]
     exponents = fatigue_channel.campaign["wohler_exponent"].tolist()
@@ -326,15 +300,12 @@ def main() -> None:
     case_result = fatigue_channel.files.set_index("case_row").loc[case_row]
     source_path = Path(case_result["filename"])
 
-    # ------------------------------------------------------------------
-    # Data reading
-    # ------------------------------------------------------------------
-    console.print("\n=== Data reading ===")
+    console.print(Markdown("# Data reading"))
     raw_data = read_hawc2_flex(source_path)
-    console.print(f"Read {source_path}")
+    console.print(f"Read {source_path.name}")
     console.print(f"Data shape: {raw_data.shape}")
-    console.print("Available channels:")
-    console.print(raw_data.columns.tolist())
+    console.print("First 10 available channels:")
+    console.print(raw_data.columns.tolist()[:10])
     console.print("Representative channel metadata:")
     metadata_names = raw_data.attrs.get("channel_names", [])
     metadata_units = raw_data.attrs.get("units", [])
@@ -354,13 +325,10 @@ def main() -> None:
     console.print("Representative raw time-series values:")
     console.print(raw_data[[time_channel, load_channel]].head())
 
-    # ------------------------------------------------------------------
-    # Rainflow analysis
-    # ------------------------------------------------------------------
-    console.print("\n=== Rainflow analysis ===")
+    console.print(Markdown("# Rainflow analysis"))
     rainflow = fatigue_channel.rainflow_results[case_row]
     console.print(f"Selected FLS case row: {case_row}")
-    console.print(f"Selected source: {source_path}")
+    console.print(f"Selected source: {source_path.name}")
     console.print(f"Method: {rainflow.method}")
     console.print(f"Windap levels: {rainflow.levels}")
     console.print(f"Windap threshold: {rainflow.threshold}")
@@ -370,13 +338,11 @@ def main() -> None:
     console.print("Mean sample:", rainflow.mean.head().tolist())
     console.print("Count sample:", rainflow.count.head().tolist())
 
-    # ------------------------------------------------------------------
-    # Rainflow visualization
-    # ------------------------------------------------------------------
-    console.print("\n=== Rainflow visualization ===")
+    console.print(Markdown("# Rainflow visualization"))
     # The current range-spectrum plotting helper accepts a raw signal and
     # performs its own rainflow count.
-    range_spectrum_figure = plot_rainflow_range_spectrum(raw_data[load_channel])
+    with redirect_stdout(StringIO()):
+        range_spectrum_figure = plot_rainflow_range_spectrum(raw_data[load_channel])
     range_spectrum_figure.show()
 
     # Damage and matrix calculations can reuse the retained FLS rainflow cycles.
@@ -403,10 +369,7 @@ def main() -> None:
         "API."
     )
 
-    # ------------------------------------------------------------------
-    # Time-series visualization
-    # ------------------------------------------------------------------
-    console.print("\n=== Time-series visualization ===")
+    console.print(Markdown("# Time-series visualization"))
     # LoadArena currently provides the reader, while this time-series figure is
     # created directly with Plotly rather than a LoadArena-native plotting API.
     time_series_figure = px.line(

@@ -241,7 +241,7 @@ def test_visualization_import_without_ai_credentials():
     completed = subprocess.run(
         [sys.executable, "-c", "import sys; import load_arena.visualization; "
          "from load_arena.visualization.statistics_plots import plot_statistics; "
-         "assert 'load_arena.AI.AI_tool_calling_V3' not in sys.modules"],
+         "assert 'load_arena.AI.Ai_tool_calling_V7' not in sys.modules"],
         env=environment, capture_output=True, text=True, timeout=60,
     )
     assert completed.returncode == 0, completed.stderr

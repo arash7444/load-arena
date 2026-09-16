@@ -363,7 +363,7 @@ def test_real_fixture_uls(tmp_path):
     Returns: None; real reader results match the direct pipeline.
     Examples: pytest tests/test_project.py -k real_fixture
     """
-    root = Path(__file__).parent / "h2_res/dlc13"
+    root = Path(__file__).parent / "h2_res/int_res/dlc13"
     table = pd.DataFrame({"Folder": [str(root)], "Case_folder": ["dlc13"],
                           "Timeseries": ["dlc13_wsp04_wdir000_s023004"],
                           "Family": [1], "PLF": [1.5], "Averaging_method": ["mean"]})

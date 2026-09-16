@@ -1,5 +1,9 @@
 # Rainflow, DEL, Reader, and Input API Repairs
 
+> Historical implementation record: `demo/call_DEL_full.py` was retained during
+> this repair and later archived under `demo/obsolete_demos/` when the
+> comprehensive project demo superseded it.
+
 ## Summary
 
 - Do not modify `demo/call_DEL_full.py`.

@@ -24,7 +24,7 @@ def test_read_hawc2_flex():
     """
 
     df_1 = read_hawc2_flex(
-        Path(r".\tests\h2_res\dlc13\dlc13_wsp04_wdir000_s023004")
+        Path("tests/h2_res/int_res/dlc13/dlc13_wsp04_wdir000_s023004")
     )
 
     azimuth = df_1["Azi1_[deg]"].max().round(0)
