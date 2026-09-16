@@ -18,6 +18,13 @@ from load_arena.visualization import (
 )
 
 
+from rich.markdown import Markdown
+from rich.console import Console
+from rich.traceback import install
+
+install()
+console = Console()
+
 def main() -> None:
     """Run the complete LoadArena capability demo against its adjacent project.
 
@@ -45,16 +52,16 @@ def main() -> None:
     # ------------------------------------------------------------------
     # Load project
     # ------------------------------------------------------------------
-    print("\n=== Load project ===")
-    config_path = Path(__file__).with_name("project.yaml")
-    project = LoadArenaProject.from_yaml(config_path)
+    console.print(Markdown("# Load project"))
+    config_path = Path(__file__).with_name("project.yaml") # path to project.yaml file
+    project = LoadArenaProject.from_yaml(config_path) # Load project from yaml file
 
-    print(f"Project: {project.config.project.name}")
-    print(f"Configuration: {project.source_path}")
-    print(f"Simulation results: {project.config.data.results_path}")
-    print(f"Output directory: {project.config.output.directory}")
-    print(f"Simulation software: {project.config.data.software}")
-    print(
+    console.print(f"Project: {project.config.project.name}") # Project name
+    console.print(f"Configuration: {project.source_path}") # Configuration path
+    console.print(f"Simulation results: {project.config.data.results_path}") # Simulation results main path 
+    console.print(f"Output directory: {project.config.output.directory}") # Output directory
+    console.print(f"Simulation software: {project.config.data.software}")
+    console.print(
         "Enabled analyses:",
         {
             "statistics": project.config.analysis.statistics.enabled,
@@ -66,21 +73,21 @@ def main() -> None:
     # ------------------------------------------------------------------
     # Statistics
     # ------------------------------------------------------------------
-    print("\n=== Statistics ===")
+    console.print(Markdown("# Statistics"))
     statistics = project.run_statistics()
-    print(f"Available simulations: {len(statistics.filename)}")
-    print("First simulation files:")
-    print(*statistics.filename[:3], sep="\n")
-    print(f"Available channels ({len(statistics.mean.columns)} total):")
-    print(statistics.mean.columns.tolist())
+    console.print(f"Available simulations: {len(statistics.filename)}") # Number of simulations
+    console.print("First simulation files:") # First 3 simulation files
+    console.print(*statistics.filename[:3], sep="\n") # this is how you access to simulation file names
+    console.print(f"Available channels ({len(statistics.mean.columns)} total):") # Number of channels
+    console.print(statistics.mean.columns.tolist())
 
     for statistic_name in ("mean", "std", "min", "max"):
-        table = getattr(statistics, statistic_name)
-        print(f"\n{statistic_name} values for {load_channel}:")
-        print(table[load_channel].head(3))
+        table = getattr(statistics, statistic_name) # this is how you access to statistics dataframe (Get a named attribute from an object)
+        console.print(f"\n{statistic_name} values for {load_channel}:") 
+        console.print(table[load_channel].head(3)) # the statistics of load_channel
 
-    print("\nRaw and standalone PLF-adjusted statistics:")
-    print(
+    console.print("\nRaw and standalone PLF-adjusted statistics:")
+    console.print(
         statistics.mean[[load_channel]].head(3).rename(
             columns={load_channel: "raw_mean"}
         ).join(
@@ -89,12 +96,12 @@ def main() -> None:
             )
         )
     )
-    print(
+    console.print(
         "Standalone statistics use a factor of 1, so their raw and PLF tables "
         "match. Statistics plotting intentionally has no x_plf option."
     )
 
-    # Default x uses the stored simulation row positions. Constructing with
+    # Plot 1: Default x uses the stored simulation row positions. Constructing with
     # show=False is useful when a caller wants to customize before display.
     statistics_scatter = statistics.explore(
         channel=load_channel,
@@ -105,11 +112,31 @@ def main() -> None:
     statistics_scatter.update_layout(title="Maximum power by simulation row")
     statistics_scatter.show()
 
-    # A numeric x channel may use a statistic independent of the y statistic.
+
+    # Plot 2: similar to plot above, but with file names on x-axis instead of simulation row positions
+    statistics_scatter = statistics.explore(
+        channel=load_channel,
+        statistic="max",
+        kind="scatter",
+        show=False,
+    )
+
+    # here, we are updating the x-axis to show file names instead of simulation row positions
+    statistics_scatter.update_traces(
+        x=[Path(filename).name for filename in statistics.filename],
+    )
+
+    statistics_scatter.update_layout(
+        xaxis_title="Simulation file",
+    )
+
+    statistics_scatter.show()
+
+
+    # Plot 3: A numeric x channel may use a statistic independent of the y statistic.
     statistics_bar = statistics.explore(
         channel=load_channel,
         statistic="max",
-        x_channel=wind_speed_channel,
         x_statistic="mean",
         kind="bar",
         show=False,
@@ -133,10 +160,10 @@ def main() -> None:
     # ULS retains the exact FamilyAvg object used by its calculation, so no
     # separate family-statistics calculation is necessary.
     uls = project.run_uls()
-    family_statistics = uls.family_stats
+    family_statistics = uls.family_stats 
 
     print("Family identifiers:")
-    print(family_statistics.family_name)
+    print(family_statistics.family_name) # list of Family numbers 
     for statistic_name in ("mean", "std", "min", "max"):
         raw_table = getattr(family_statistics, statistic_name)
         plf_table = getattr(family_statistics, f"{statistic_name}_plf")
@@ -145,6 +172,7 @@ def main() -> None:
         print(f"PLF-adjusted family {statistic_name}:")
         print(plf_table[["Family", load_channel]].head(3))
 
+    
     family_provenance = family_statistics.provenance.loc[
         family_statistics.provenance["channel"] == load_channel,
         [
@@ -158,7 +186,7 @@ def main() -> None:
             "contributing_files",
             "source_file",
         ],
-    ]
+    ] # 
     print("\nFamily provenance sample:")
     print(family_provenance.head(6))
     print(
@@ -185,9 +213,9 @@ def main() -> None:
         channel=load_channel,
         statistic="max",
         plf=True,
-        x_channel=wind_speed_channel,
-        x_statistic="mean",
-        x_plf=False,
+        # x_channel=wind_speed_channel,
+        # x_statistic="mean",
+        # x_plf=False,
         kind="bar",
         show=False,
     )
